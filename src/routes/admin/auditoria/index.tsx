@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import { Eye, Search, ShieldCheck } from 'lucide-react';
+import { Eye, FileSearch, Search } from 'lucide-react';
 
 import { Badge } from '@shared/components/ui/badge';
 import { Button } from '@shared/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@shared/components/ui/card';
+import { Card, CardContent } from '@shared/components/ui/card';
 import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
+import { PageHeader } from '@shared/components/page-header';
 import {
   Select,
   SelectContent,
@@ -86,26 +81,32 @@ export default function AuditoriaPage() {
 
   const resetPage = () => setPage(1);
 
+  const total = query.data?.total ?? 0;
+  const hasFilters = !!debouncedAction || entityType !== 'all' || !!from || !!to;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Log de auditoria</h1>
-        <p className="text-sm text-muted-foreground">
-          Traza inmutable de las acciones criticas: cambios de estado de ordenes, captura de
-          resultados, soft-deletes y modificaciones de configuracion.
-        </p>
-      </div>
+      <PageHeader
+        title="Auditoria"
+        description="Traza inmutable de las acciones criticas del sistema: cambios de estado de ordenes, captura de resultados, soft-deletes y modificaciones de configuracion."
+        meta={
+          query.data && (
+            <Badge variant="subtle">
+              {total} {total === 1 ? 'evento' : 'eventos'} registrados
+            </Badge>
+          )
+        }
+      />
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ShieldCheck className="h-4 w-4" /> Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="relative lg:col-span-2">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          {/* Filtros */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_140px_140px]">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 value={search}
                 onChange={(e) => {
@@ -113,7 +114,8 @@ export default function AuditoriaPage() {
                   resetPage();
                 }}
                 placeholder="Action exacta (ej. order.delivered)"
-                className="pl-8 font-mono"
+                className="pl-9 font-mono"
+                aria-label="Buscar por action"
               />
             </div>
             <Select
@@ -134,64 +136,59 @@ export default function AuditoriaPage() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-end gap-2">
-              <div className="flex-1 space-y-1">
-                <Label className="text-xs text-muted-foreground">Desde</Label>
-                <Input
-                  type="date"
-                  value={from}
-                  onChange={(e) => {
-                    setFrom(e.target.value);
-                    resetPage();
-                  }}
-                />
-              </div>
-              <div className="flex-1 space-y-1">
-                <Label className="text-xs text-muted-foreground">Hasta</Label>
-                <Input
-                  type="date"
-                  value={to}
-                  onChange={(e) => {
-                    setTo(e.target.value);
-                    resetPage();
-                  }}
-                />
-              </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Desde</Label>
+              <Input
+                type="date"
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value);
+                  resetPage();
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Hasta</Label>
+              <Input
+                type="date"
+                value={to}
+                onChange={(e) => {
+                  setTo(e.target.value);
+                  resetPage();
+                }}
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Eventos</CardTitle>
-          <CardDescription>
-            {query.data ? `${query.data.total} eventos registrados` : 'Cargando...'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-md border">
+          {/* Tabla */}
+          <div className="overflow-hidden rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[150px]">Fecha</TableHead>
-                  <TableHead className="w-[180px]">Action</TableHead>
-                  <TableHead className="hidden md:table-cell w-[120px]">Entidad</TableHead>
+                  <TableHead className="w-[200px]">Action</TableHead>
+                  <TableHead className="hidden w-[120px] md:table-cell">Entidad</TableHead>
                   <TableHead>Resumen</TableHead>
-                  <TableHead className="hidden lg:table-cell w-[100px]">Rol</TableHead>
-                  <TableHead className="w-[60px] text-right">Detalle</TableHead>
+                  <TableHead className="hidden w-[110px] lg:table-cell">Rol</TableHead>
+                  <TableHead className="w-[48px] text-right" aria-label="Detalle" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {query.isLoading ? (
-                  <TableEmpty colSpan={6}>Cargando...</TableEmpty>
+                  <TableEmpty colSpan={6} iconHidden>
+                    Cargando eventos...
+                  </TableEmpty>
                 ) : query.isError ? (
                   <TableEmpty colSpan={6}>No se pudo cargar la auditoria.</TableEmpty>
                 ) : query.data?.items.length === 0 ? (
-                  <TableEmpty colSpan={6}>No hay eventos para los filtros actuales.</TableEmpty>
+                  <TableEmpty colSpan={6} icon={FileSearch}>
+                    {hasFilters
+                      ? 'No hay eventos para los filtros aplicados.'
+                      : 'Aun no se registran eventos. Cuando los usuarios trabajen en el sistema apareceran aqui.'}
+                  </TableEmpty>
                 ) : (
                   query.data?.items.map((e) => (
-                    <TableRow key={e.id}>
+                    <TableRow key={e.id} className="group">
                       <TableCell className="text-xs text-muted-foreground tabular-nums">
                         {formatDateTime(e.createdAt)}
                       </TableCell>
@@ -200,23 +197,25 @@ export default function AuditoriaPage() {
                           {e.action}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs">
+                      <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                         {e.entityType}
                       </TableCell>
                       <TableCell className="max-w-[420px] truncate text-sm">
                         {e.summary ?? '—'}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                      <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                         {e.actorRole ?? '—'}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="icon-sm"
                           onClick={() => setSelected(e)}
                           aria-label="Ver detalle"
+                          title="Ver detalle"
+                          className="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -226,7 +225,7 @@ export default function AuditoriaPage() {
             </Table>
           </div>
 
-          {query.data && (
+          {query.data && query.data.items.length > 0 && (
             <Pager
               page={query.data.page}
               perPage={query.data.perPage}

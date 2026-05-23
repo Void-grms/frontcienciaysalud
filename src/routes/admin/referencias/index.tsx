@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import { Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
+import { Building2, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@shared/components/ui/badge';
 import { Button } from '@shared/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@shared/components/ui/card';
+import { Card, CardContent } from '@shared/components/ui/card';
 import { Input } from '@shared/components/ui/input';
+import { PageHeader } from '@shared/components/page-header';
 import {
   Select,
   SelectContent,
@@ -98,32 +93,36 @@ export default function ReferenciasPage() {
     }
   };
 
+  const total = query.data?.total ?? 0;
+  const hasFilters = !!debouncedSearch || status !== 'active';
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Referencias</h1>
-        <p className="text-sm text-muted-foreground">
-          Entidades externas (clinicas, policlinicos, medicos referentes) que solicitan ordenes y
-          tienen acceso al portal de referencia.
-        </p>
-      </div>
+      <PageHeader
+        title="Referencias"
+        description="Entidades externas (clinicas, policlinicos, medicos referentes) que solicitan ordenes y tienen acceso al portal de referencia."
+        meta={
+          query.data && (
+            <Badge variant="subtle">
+              {total} {total === 1 ? 'referencia' : 'referencias'} encontradas
+            </Badge>
+          )
+        }
+        actions={
+          <Button onClick={openCreate}>
+            <Plus /> Nueva referencia
+          </Button>
+        }
+      />
 
       <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Lista de referencias</CardTitle>
-            <CardDescription>
-              {query.data ? `${query.data.total} referencias registradas` : 'Cargando...'}
-            </CardDescription>
-          </div>
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Nueva referencia
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 value={search}
                 onChange={(e) => {
@@ -131,7 +130,8 @@ export default function ReferenciasPage() {
                   setPage(1);
                 }}
                 placeholder="Buscar por nombre, RUC o contacto..."
-                className="pl-8"
+                className="pl-9"
+                aria-label="Buscar referencias"
               />
             </div>
             <Select
@@ -154,39 +154,59 @@ export default function ReferenciasPage() {
             </Select>
           </div>
 
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
+                  <TableHead>Referencia</TableHead>
                   <TableHead className="hidden md:table-cell">RUC</TableHead>
                   <TableHead className="hidden lg:table-cell">Contacto</TableHead>
-                  <TableHead className="w-[90px] text-right">Usuarios</TableHead>
-                  <TableHead className="w-[110px]">Estado</TableHead>
+                  <TableHead className="w-[100px] text-right">Usuarios</TableHead>
+                  <TableHead className="w-[100px]">Estado</TableHead>
                   <TableHead className="w-[140px] text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {query.isLoading ? (
-                  <TableEmpty colSpan={6}>Cargando...</TableEmpty>
+                  <TableEmpty colSpan={6} iconHidden>
+                    Cargando referencias...
+                  </TableEmpty>
                 ) : query.isError ? (
                   <TableEmpty colSpan={6}>No se pudieron cargar las referencias.</TableEmpty>
                 ) : query.data?.items.length === 0 ? (
-                  <TableEmpty colSpan={6}>No hay referencias con esos filtros.</TableEmpty>
+                  <TableEmpty colSpan={6} icon={Building2}>
+                    {hasFilters
+                      ? 'No hay referencias para los filtros aplicados.'
+                      : 'Aun no hay referencias registradas. Crea la primera con "Nueva referencia".'}
+                  </TableEmpty>
                 ) : (
                   query.data?.items.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.name}</TableCell>
-                      <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="grid size-8 shrink-0 place-items-center rounded-md bg-primary-50 text-primary-700"
+                            aria-hidden
+                          >
+                            <Building2 className="size-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{r.name}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden font-mono text-xs text-muted-foreground tabular-nums md:table-cell">
                         {r.taxId ?? '—'}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        <div className="text-sm">{r.contactName ?? '—'}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {r.contactEmail ?? r.contactPhone ?? ''}
+                        <div className="space-y-0.5 text-xs leading-tight">
+                          <div className="text-foreground">{r.contactName ?? '—'}</div>
+                          <div className="text-muted-foreground">
+                            {r.contactEmail ?? r.contactPhone ?? ''}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right text-sm tabular-nums">
                         {r._count?.users ?? 0}
                       </TableCell>
                       <TableCell>
@@ -195,31 +215,33 @@ export default function ReferenciasPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-0.5">
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="icon-sm"
                             onClick={() => setUsersFor(r.id)}
                             aria-label={`Usuarios de ${r.name}`}
                             title="Usuarios del portal"
                           >
-                            <Users className="h-4 w-4" />
+                            <Users />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="icon-sm"
                             onClick={() => openEdit(r)}
                             aria-label={`Editar ${r.name}`}
+                            title="Editar"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="icon-sm"
                             onClick={() => setPendingDelete(r)}
                             aria-label={`Eliminar ${r.name}`}
+                            title="Eliminar"
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
@@ -230,7 +252,7 @@ export default function ReferenciasPage() {
             </Table>
           </div>
 
-          {query.data && (
+          {query.data && query.data.items.length > 0 && (
             <Pager
               page={query.data.page}
               perPage={query.data.perPage}

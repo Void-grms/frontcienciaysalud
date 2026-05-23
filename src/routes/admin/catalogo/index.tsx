@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 
+import { PageHeader } from '@shared/components/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 
 import { CategoriesTab } from './categories-tab';
@@ -16,7 +17,9 @@ function isTabKey(value: string | null): value is TabKey {
 
 export default function CatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const current: TabKey = isTabKey(searchParams.get('tab')) ? (searchParams.get('tab') as TabKey) : 'categorias';
+  const current: TabKey = isTabKey(searchParams.get('tab'))
+    ? (searchParams.get('tab') as TabKey)
+    : 'categorias';
 
   const setTab = (tab: string) => {
     const next = new URLSearchParams(searchParams);
@@ -26,30 +29,28 @@ export default function CatalogPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Catalogo</h1>
-        <p className="text-sm text-muted-foreground">
-          Administra las categorias, pruebas, paneles e importacion masiva del catalogo del laboratorio.
-        </p>
-      </div>
+      <PageHeader
+        title="Catalogo"
+        description="Administra las categorias, pruebas y paneles del laboratorio. La pestana 'Importacion' permite cargar el catalogo masivo desde Excel."
+      />
 
-      <Tabs value={current} onValueChange={setTab}>
+      <Tabs value={current} onValueChange={setTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="categorias">Categorias</TabsTrigger>
           <TabsTrigger value="pruebas">Pruebas</TabsTrigger>
           <TabsTrigger value="paneles">Paneles</TabsTrigger>
           <TabsTrigger value="importacion">Importacion</TabsTrigger>
         </TabsList>
-        <TabsContent value="categorias">
+        <TabsContent value="categorias" className="mt-0">
           <CategoriesTab />
         </TabsContent>
-        <TabsContent value="pruebas">
+        <TabsContent value="pruebas" className="mt-0">
           <TestsTab />
         </TabsContent>
-        <TabsContent value="paneles">
+        <TabsContent value="paneles" className="mt-0">
           <PanelsTab />
         </TabsContent>
-        <TabsContent value="importacion">
+        <TabsContent value="importacion" className="mt-0">
           <ImportTab />
         </TabsContent>
       </Tabs>

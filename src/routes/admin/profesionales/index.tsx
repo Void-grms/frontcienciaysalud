@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Search, Stethoscope, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@shared/components/ui/badge';
 import { Button } from '@shared/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@shared/components/ui/card';
+import { Card, CardContent } from '@shared/components/ui/card';
 import { Input } from '@shared/components/ui/input';
+import { PageHeader } from '@shared/components/page-header';
 import {
   Select,
   SelectContent,
@@ -97,32 +92,36 @@ export default function ProfesionalesPage() {
     }
   };
 
+  const total = query.data?.total ?? 0;
+  const hasFilters = !!debouncedSearch || status !== 'active';
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Profesionales</h1>
-        <p className="text-sm text-muted-foreground">
-          Profesionales que firman los informes. Cada uno tiene una imagen de firma que se incrusta
-          al final del PDF y se asocia por defecto a una categoria o prueba.
-        </p>
-      </div>
+      <PageHeader
+        title="Profesionales"
+        description="Profesionales que firman los informes. Cada uno tiene una imagen de firma que se incrusta al final del PDF."
+        meta={
+          query.data && (
+            <Badge variant="subtle">
+              {total} {total === 1 ? 'profesional' : 'profesionales'}
+            </Badge>
+          )
+        }
+        actions={
+          <Button onClick={openCreate}>
+            <Plus /> Nuevo profesional
+          </Button>
+        }
+      />
 
       <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Lista de profesionales</CardTitle>
-            <CardDescription>
-              {query.data ? `${query.data.total} profesionales` : 'Cargando...'}
-            </CardDescription>
-          </div>
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Nuevo profesional
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 value={search}
                 onChange={(e) => {
@@ -130,7 +129,8 @@ export default function ProfesionalesPage() {
                   setPage(1);
                 }}
                 placeholder="Buscar por nombre, titulo o colegiatura..."
-                className="pl-8"
+                className="pl-9"
+                aria-label="Buscar profesionales"
               />
             </div>
             <Select
@@ -153,32 +153,38 @@ export default function ProfesionalesPage() {
             </Select>
           </div>
 
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[80px]">Firma</TableHead>
-                  <TableHead>Nombre</TableHead>
+                  <TableHead>Profesional</TableHead>
                   <TableHead className="hidden md:table-cell">Titulo</TableHead>
                   <TableHead className="hidden lg:table-cell">Colegiatura</TableHead>
-                  <TableHead className="w-[110px]">Estado</TableHead>
+                  <TableHead className="w-[100px]">Estado</TableHead>
                   <TableHead className="w-[110px] text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {query.isLoading ? (
-                  <TableEmpty colSpan={6}>Cargando...</TableEmpty>
+                  <TableEmpty colSpan={6} iconHidden>
+                    Cargando profesionales...
+                  </TableEmpty>
                 ) : query.isError ? (
                   <TableEmpty colSpan={6}>No se pudieron cargar los profesionales.</TableEmpty>
                 ) : query.data?.items.length === 0 ? (
-                  <TableEmpty colSpan={6}>No hay profesionales con esos filtros.</TableEmpty>
+                  <TableEmpty colSpan={6} icon={Stethoscope}>
+                    {hasFilters
+                      ? 'No hay profesionales para los filtros aplicados.'
+                      : 'Aun no hay profesionales registrados. Crea el primero con "Nuevo profesional".'}
+                  </TableEmpty>
                 ) : (
                   query.data?.items.map((p) => {
                     const sigUrl = storageUrl(p.signatureStorageKey);
                     return (
                       <TableRow key={p.id}>
                         <TableCell>
-                          <div className="flex h-10 w-16 items-center justify-center overflow-hidden rounded border bg-muted/40">
+                          <div className="flex h-10 w-16 items-center justify-center overflow-hidden rounded border border-border bg-muted/30">
                             {sigUrl ? (
                               <img
                                 src={sigUrl}
@@ -186,15 +192,25 @@ export default function ProfesionalesPage() {
                                 className="max-h-full max-w-full object-contain"
                               />
                             ) : (
-                              <span className="text-[10px] text-muted-foreground">—</span>
+                              <span className="text-[10px] text-muted-foreground/60">sin firma</span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{p.fullName}</TableCell>
-                        <TableCell className="hidden text-muted-foreground md:table-cell">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-50 text-primary-700"
+                              aria-hidden
+                            >
+                              <Stethoscope className="size-4" />
+                            </div>
+                            <div className="min-w-0 font-medium truncate">{p.fullName}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                           {p.professionalTitle ?? '—'}
                         </TableCell>
-                        <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
+                        <TableCell className="hidden font-mono text-xs text-muted-foreground tabular-nums lg:table-cell">
                           {p.licenseNumber ?? '—'}
                         </TableCell>
                         <TableCell>
@@ -203,22 +219,24 @@ export default function ProfesionalesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
+                          <div className="flex justify-end gap-0.5">
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="icon-sm"
                               onClick={() => openEdit(p)}
                               aria-label={`Editar ${p.fullName}`}
+                              title="Editar"
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Pencil />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="icon-sm"
                               onClick={() => setPendingDelete(p)}
                               aria-label={`Eliminar ${p.fullName}`}
+                              title="Eliminar"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="text-destructive" />
                             </Button>
                           </div>
                         </TableCell>
@@ -230,7 +248,7 @@ export default function ProfesionalesPage() {
             </Table>
           </div>
 
-          {query.data && (
+          {query.data && query.data.items.length > 0 && (
             <Pager
               page={query.data.page}
               perPage={query.data.perPage}
