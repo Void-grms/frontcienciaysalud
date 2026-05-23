@@ -4,6 +4,7 @@ export interface AuthUser {
   id: string;
   role: UserRole;
   email: string | null;
+  documentNumber?: string | null;
   fullName: string | null;
   mustChangePassword: boolean;
 }

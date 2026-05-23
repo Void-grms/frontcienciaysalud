@@ -3,20 +3,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Activity, Loader2, ShieldCheck } from 'lucide-react';
 
 import { Button } from '@shared/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
 import { ApiError } from '@shared/api/error-mapper';
 import { defaultPathForRole, useAuth } from '@shared/auth/useAuth';
 
 const schema = z.object({
-  identifier: z
-    .string()
-    .min(3, 'Ingresa tu email o documento')
-    .max(180),
+  identifier: z.string().min(3, 'Ingresa tu email o documento').max(180),
   password: z.string().min(6, 'Minimo 6 caracteres').max(128),
 });
 
@@ -33,7 +29,6 @@ export default function LoginPage() {
     defaultValues: { identifier: '', password: '' },
   });
 
-  // Si ya hay sesion al llegar al login, redirige al portal correspondiente.
   if (!isAuthenticating && user) {
     return <Navigate to={from ?? defaultPathForRole(user.role)} replace />;
   }
@@ -56,18 +51,69 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Iniciar sesion</CardTitle>
-          <CardDescription>
-            Ingresa tu correo (admin/referencia) o documento (paciente) y contrasena.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-            <div className="space-y-2">
-              <Label htmlFor="identifier">Email o documento</Label>
+    <div className="min-h-screen lg:grid lg:grid-cols-[1fr_minmax(420px,_520px)]">
+      {/* Panel izquierdo: branding + value props. Solo en pantallas grandes. */}
+      <div className="relative hidden overflow-hidden bg-primary-700 text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12">
+        <div className="absolute inset-0 bg-grid-pattern opacity-10 mask-radial-fade" aria-hidden />
+
+        <div className="relative z-10 flex items-center gap-2.5">
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15 backdrop-blur">
+            <Activity className="size-5" />
+          </div>
+          <span className="text-lg font-semibold tracking-tight">Lab Clinico</span>
+        </div>
+
+        <div className="relative z-10 max-w-md space-y-5">
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight">
+            Gestiona tu laboratorio con seguridad y trazabilidad clinica.
+          </h1>
+          <p className="text-base text-primary-foreground/85">
+            Pacientes, ordenes, resultados y entrega de informes firmados —
+            todo en un solo sistema, con auditoria completa de cada accion.
+          </p>
+
+          <ul className="space-y-3 pt-4 text-sm text-primary-foreground/90">
+            <li className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 size-5 flex-none" />
+              <span>Informes con firma digital y verificacion por QR publico.</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 size-5 flex-none" />
+              <span>Banderas automaticas para valores criticos y rangos de referencia por edad/sexo.</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 size-5 flex-none" />
+              <span>Acceso diferenciado para admin, pacientes y clinicas de referencia.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="relative z-10 text-xs text-primary-foreground/70">
+          © {new Date().getFullYear()} Lab Clinico. Todos los derechos reservados.
+        </div>
+      </div>
+
+      {/* Panel derecho: formulario. */}
+      <div className="flex min-h-screen flex-col justify-center bg-background px-6 py-12 sm:px-12">
+        <div className="mx-auto w-full max-w-sm space-y-8 animate-fade-in">
+          {/* Logo compacto solo visible en mobile. */}
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground">
+              <Activity className="size-5" />
+            </div>
+            <span className="text-lg font-semibold tracking-tight">Lab Clinico</span>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold tracking-tight">Iniciar sesion</h2>
+            <p className="text-sm text-muted-foreground">
+              Ingresa tus credenciales para acceder al sistema.
+            </p>
+          </div>
+
+          <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+            <div className="space-y-1.5">
+              <Label htmlFor="identifier">Email o numero de documento</Label>
               <Input
                 id="identifier"
                 autoComplete="username"
@@ -76,12 +122,23 @@ export default function LoginPage() {
                 aria-invalid={!!form.formState.errors.identifier || undefined}
               />
               {form.formState.errors.identifier && (
-                <p className="text-sm text-destructive">{form.formState.errors.identifier.message}</p>
+                <p className="text-xs text-destructive">{form.formState.errors.identifier.message}</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                Los pacientes ingresan con su numero de documento.
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Contrasena</Label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Contrasena</Label>
+                <Link
+                  to="/recuperar-contrasena"
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Olvide mi contrasena
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -90,23 +147,26 @@ export default function LoginPage() {
                 aria-invalid={!!form.formState.errors.password || undefined}
               />
               {form.formState.errors.password && (
-                <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
+                <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting && <Loader2 className="animate-spin" />}
               Entrar
             </Button>
-
-            <div className="text-center text-sm">
-              <Link to="/recuperar-contrasena" className="text-primary hover:underline">
-                Olvide mi contrasena
-              </Link>
-            </div>
           </form>
-        </CardContent>
-      </Card>
+
+          <p className="text-center text-xs text-muted-foreground">
+            ¿Problemas para acceder? Contacta al administrador del laboratorio.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

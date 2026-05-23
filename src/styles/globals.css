@@ -4,32 +4,51 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    /* Surfaces — escala de grises calida con tinte azul muy sutil. */
+    --background: 220 20% 99%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
 
-    --primary: 173 80% 26%;          /* #0F766E */
-    --primary-foreground: 0 0% 100%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --secondary: 210 40% 96%;
+    /* Primary teal — saturado pero con buen contraste sobre blanco (AA). */
+    --primary: 173 80% 26%;
+    --primary-foreground: 0 0% 100%;
+    --primary-50: 168 76% 96%;
+    --primary-100: 167 85% 89%;
+    --primary-600: 173 80% 26%;
+    --primary-700: 174 84% 20%;
+
+    --secondary: 220 15% 96%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 173 60% 95%;
+    --accent-foreground: 174 84% 20%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 173 80% 26%;
+    --success: 142 71% 35%;
+    --success-foreground: 0 0% 100%;
 
-    --radius: 0.5rem;
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 84% 14%;
+
+    --info: 212 92% 45%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 220 15% 91%;
+    --border-strong: 220 15% 82%;
+    --input: 220 15% 91%;
+    --ring: 173 80% 32%;
+
+    --radius: 0.625rem;
   }
 
   * {
@@ -44,12 +63,67 @@
     background: hsl(var(--background));
     color: hsl(var(--foreground));
     font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    /* Habilita ligaduras + alternate stylistic sets de Inter (mejor lectura
+       de numeros tabulares y letras a/g en UIs clínicas). */
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings tighter por defecto, mejor jerarquia visual. */
+  h1, h2, h3, h4 {
+    letter-spacing: -0.015em;
+  }
+
+  /* Numeros tabulares en tablas y elementos data-heavy. */
+  .tabular-nums,
+  table,
+  [data-tabular] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Scrollbar discreto en webkit. No invasivo. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border-strong));
+    border-radius: 999px;
+    border: 2px solid hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.45);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   #root {
     min-height: 100%;
     display: flex;
     flex-direction: column;
+  }
+
+  /* Focus ring uniforme y accesible (>= 3:1 sobre cualquier surface). */
+  :focus-visible {
+    outline: none;
+  }
+}
+
+@layer utilities {
+  /* Patron de cuadricula sutil para hero/login. Renderiza con CSS puro. */
+  .bg-grid-pattern {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.6) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.6) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Mascara radial para que la grilla se desvanezca a los bordes. */
+  .mask-radial-fade {
+    -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
+    mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
   }
 }
