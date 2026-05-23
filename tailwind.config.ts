@@ -87,9 +87,14 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(2px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'mesh-spin': {
+          from: { transform: 'rotate(0deg)' },
+          to: { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
-        'fade-in': 'fade-in 200ms ease-out',
+        'fade-in': 'fade-in 400ms ease-out both',
+        'mesh-spin': 'mesh-spin 22s linear infinite',
       },
     },
   },
