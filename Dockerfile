@@ -31,10 +31,18 @@ FROM nginx:1.27-alpine AS runner
 RUN apk add --no-cache wget
 
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Usamos templates de nginx: el docker-entrypoint oficial corre `envsubst`
+# sobre /etc/nginx/templates/*.template y escribe a /etc/nginx/conf.d/ antes
+# de arrancar nginx. Esto permite que `listen ${PORT}` se resuelva al puerto
+# que Railway inyecte. NGINX_ENVSUBST_FILTER limita la sustitucion solo a
+# PORT, asi no rompe variables propias de nginx ($uri, $host, etc).
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+ENV NGINX_ENVSUBST_FILTER=^PORT$
+ENV PORT=80
 
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://localhost/healthz || exit 1
+  CMD wget -qO- http://localhost:${PORT}/healthz || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
