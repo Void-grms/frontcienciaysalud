@@ -1,8 +1,11 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 
 import { apiInternals } from '@shared/api/client';
 import { authApi } from '@features/auth/api';
 
+import { SessionExpiringDialog } from './SessionExpiringDialog';
+import { useIdleTimer } from './useIdleTimer';
 import type { AuthUser } from './types';
 
 interface AuthContextValue {
@@ -95,6 +98,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
+  // Logout disparado por idle (no por el usuario): cierra sesion sin esperar
+  // confirmacion y muestra toast para que el usuario sepa por que volvio al login.
+  const handleIdleTimeout = useCallback(() => {
+    void logout().finally(() => {
+      toast.info('Tu sesion expiro por inactividad. Vuelve a iniciar sesion.');
+    });
+  }, [logout]);
+
+  const idle = useIdleTimer(!!user, handleIdleTimeout);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -107,5 +120,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user, isAuthenticating, login, logout, refresh],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <SessionExpiringDialog
+        open={idle.showWarning && !!user}
+        secondsToLogout={idle.secondsToLogout}
+        onExtend={() => void idle.extend()}
+        onLogoutNow={() => void logout()}
+      />
+    </AuthContext.Provider>
+  );
 }

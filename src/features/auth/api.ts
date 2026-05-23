@@ -16,6 +16,10 @@ export const authApi = {
     await api.post('/auth/logout');
   },
 
+  async heartbeat(): Promise<void> {
+    await api.post('/auth/heartbeat');
+  },
+
   async me(): Promise<LoginResponse['user']> {
     const { data } = await api.get<LoginResponse['user']>('/auth/me');
     return data;
