@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@shared/components/ui/select';
+import { cn } from '@shared/lib/cn';
 
 import type { OrderItem, ResultFlag } from '@features/orders/types';
 import type { Test } from '@features/catalog/types';
@@ -61,32 +62,58 @@ export function ResultRow({ item, test, draft, onPatch, disabled }: ResultRowPro
   const flag = item.result?.flag ?? null;
   const flagMeta = flag ? FLAG_META[flag] : null;
 
+  const hasValue =
+    (type === 'numeric' && currentNumeric !== null) ||
+    ((type === 'qualitative' || type === 'text') && currentText !== null && currentText !== '');
+
   return (
-    <tr className="border-b last:border-b-0">
-      <td className="p-3 align-top font-mono text-xs text-muted-foreground">
+    <tr className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/30 data-[critical=true]:bg-destructive/[0.03]"
+        data-critical={flag === 'critical' || undefined}
+    >
+      <td className="px-3 py-2.5 align-top font-mono text-xs tabular-nums text-muted-foreground">
         {item.test.code}
       </td>
-      <td className="p-3 align-top">
-        <div className="text-sm font-medium">{item.test.name}</div>
-        <div className="text-xs text-muted-foreground">
-          {type} · v{item.testVersion}
-          {item.panel ? ` · panel ${item.panel.code}` : ''}
+      <td className="px-3 py-2.5 align-top">
+        <div className="flex items-start gap-2">
+          {/* Indicador de fila completada */}
+          <span
+            className={cn(
+              'mt-1.5 size-1.5 shrink-0 rounded-full transition-colors',
+              hasValue ? 'bg-success' : 'bg-muted-foreground/30',
+            )}
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <div className="text-sm font-medium leading-tight">{item.test.name}</div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">
+              <span className="uppercase tracking-wide">{type}</span>
+              <span className="mx-1.5 text-border">·</span>
+              v{item.testVersion}
+              {item.panel && (
+                <>
+                  <span className="mx-1.5 text-border">·</span>
+                  Panel {item.panel.code}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </td>
-      <td className="p-3 align-top">
+      <td className="px-3 py-2.5 align-top">
         {type === 'numeric' && (
           <div className="flex items-center gap-2">
             <Input
               type="number"
               step="any"
               inputMode="decimal"
-              className="w-32"
+              className="w-32 tabular-nums"
               disabled={disabled}
               value={currentNumeric === null ? '' : String(currentNumeric)}
               onChange={(e) => {
                 const v = e.target.value;
                 onPatch({ valueNumeric: v === '' ? null : Number(v) });
               }}
+              placeholder="—"
             />
             {item.test.unit && (
               <span className="text-xs text-muted-foreground">{item.test.unit}</span>
@@ -125,18 +152,22 @@ export function ResultRow({ item, test, draft, onPatch, disabled }: ResultRowPro
           />
         )}
         {type === 'observation' && (
-          <span className="text-xs text-muted-foreground italic">
+          <span className="text-xs italic text-muted-foreground">
             Sin valor cuantitativo · usa el campo Observacion
           </span>
         )}
       </td>
-      <td className="p-3 align-top">
-        {flagMeta ? <Badge variant={flagMeta.variant}>{flagMeta.label}</Badge> : <span className="text-xs text-muted-foreground">—</span>}
+      <td className="px-3 py-2.5 align-top">
+        {flagMeta ? (
+          <Badge variant={flagMeta.variant}>{flagMeta.label}</Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
       </td>
-      <td className="p-3 align-top">
+      <td className="px-3 py-2.5 align-top">
         <Textarea
           rows={2}
-          className="min-h-[44px] w-full"
+          className="min-h-[44px] w-full resize-y"
           disabled={disabled}
           value={currentObservation ?? ''}
           onChange={(e) => onPatch({ observation: e.target.value || null })}

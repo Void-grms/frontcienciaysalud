@@ -6,20 +6,17 @@ import {
   CheckCircle2,
   ClipboardCheck,
   CloudUpload,
+  Info,
   Loader2,
+  Lock,
   Save,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@shared/components/ui/badge';
 import { Button } from '@shared/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@shared/components/ui/card';
+import { Card, CardContent } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/cn';
 import { formatDateTime } from '@shared/lib/format-date';
 import { reportFormError } from '@shared/lib/report-error';
 
@@ -33,13 +30,34 @@ import { ResultRow, type DraftResult } from './result-row';
 
 const STATUS_META: Record<
   SaveStatus,
-  { label: string; icon: typeof CloudUpload; className: string }
+  { label: string; icon: typeof CloudUpload; className: string; spin?: boolean }
 > = {
-  idle: { label: 'Sin cambios', icon: CheckCircle2, className: 'text-muted-foreground' },
-  pending: { label: 'Cambios pendientes...', icon: CloudUpload, className: 'text-amber-700' },
-  saving: { label: 'Guardando...', icon: Loader2, className: 'text-blue-700' },
-  saved: { label: 'Guardado', icon: CheckCircle2, className: 'text-emerald-700' },
-  error: { label: 'Error al guardar', icon: AlertTriangle, className: 'text-destructive' },
+  idle: {
+    label: 'Sin cambios',
+    icon: CheckCircle2,
+    className: 'text-muted-foreground',
+  },
+  pending: {
+    label: 'Cambios pendientes',
+    icon: CloudUpload,
+    className: 'text-warning-foreground',
+  },
+  saving: {
+    label: 'Guardando...',
+    icon: Loader2,
+    className: 'text-info',
+    spin: true,
+  },
+  saved: {
+    label: 'Guardado',
+    icon: CheckCircle2,
+    className: 'text-success',
+  },
+  error: {
+    label: 'Error al guardar',
+    icon: AlertTriangle,
+    className: 'text-destructive',
+  },
 };
 
 export default function ResultadosPage() {
@@ -48,15 +66,9 @@ export default function ResultadosPage() {
   const detailQuery = useOrderDetail(idOrCode ?? null);
   const validateMut = useValidateOrder();
 
-  // Drafts en memoria: una entrada por orderItemId con los campos que cambiaron.
-  // Campos no presentes (undefined) significan "no enviar"; null o valor
-  // explicito si se quiere limpiar o setear.
   const [drafts, setDrafts] = useState<Map<string, DraftResult>>(new Map());
-
   const order = detailQuery.data;
 
-  // Pruebas cualitativas necesitan sus options. Cargamos solo esas para
-  // ahorrar requests; las numericas/text no requieren detalle del test.
   const qualitativeTestIds = useMemo(() => {
     if (!order) return [];
     const set = new Set<string>();
@@ -80,8 +92,6 @@ export default function ResultadosPage() {
     });
   };
 
-  // El callback se llama justo antes de cada guardado, asi siempre ve el
-  // estado mas reciente (evita capturas obsoletas del closure).
   const buildEntries = (): BulkResultEntry[] => {
     const entries: BulkResultEntry[] = [];
     for (const [orderItemId, d] of drafts.entries()) {
@@ -107,18 +117,6 @@ export default function ResultadosPage() {
     onError: (err) => reportFormError(err),
   });
 
-  // Refrescos del lado del backend (flags recalculados) se reflejan via
-  // invalidacion del query. Para que el usuario sepa que "se guardo", el
-  // toast de exito lo manejamos con un efecto cuando status cambia.
-  useEffect(() => {
-    if (autosave.status === 'saved' && autosave.lastSavedAt) {
-      // No mostramos toast porque la UI ya tiene el indicador. Pero podemos
-      // poner un mensaje sutil si el usuario quiere asegurarse:
-      // toast.success("Resultados guardados", { id: "autosave" });
-    }
-  }, [autosave.status, autosave.lastSavedAt]);
-
-  // Advertencia al cerrar/recargar si hay cambios sin guardar.
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (autosave.hasPending) {
@@ -137,12 +135,8 @@ export default function ResultadosPage() {
 
   const handleValidate = async () => {
     if (!order) return;
-    // Antes de validar siempre forzamos un flush para no perder los ultimos
-    // cambios del usuario, y solo si el flush no dejo errores intentamos
-    // validar.
     if (autosave.hasPending) {
       await autosave.flush();
-      // Si todavia hay pendientes, el flush fallo y abortamos.
       if (autosave.hasPending) return;
     }
     try {
@@ -155,14 +149,19 @@ export default function ResultadosPage() {
   };
 
   if (detailQuery.isLoading) {
-    return <p className="text-sm text-muted-foreground">Cargando orden...</p>;
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        Cargando orden...
+      </div>
+    );
   }
   if (!order) {
     return (
       <div className="space-y-4">
         <Button asChild variant="ghost" size="sm">
           <Link to="/admin/ordenes">
-            <ArrowLeft className="h-4 w-4" /> Volver
+            <ArrowLeft /> Volver a ordenes
           </Link>
         </Button>
         <p className="text-sm text-destructive">No se pudo cargar la orden.</p>
@@ -175,95 +174,136 @@ export default function ResultadosPage() {
   const itemsWithResult = order.items.filter((i) => i.result !== null).length;
   const total = order.items.length;
   const allFilled = total > 0 && itemsWithResult === total;
+  const remaining = total - itemsWithResult;
+  const progress = total === 0 ? 0 : (itemsWithResult / total) * 100;
   const statusMeta = STATUS_META[autosave.status];
   const StatusIcon = statusMeta.icon;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <Button asChild variant="ghost" size="icon">
-            <Link to={`/admin/ordenes/${order.code}`} aria-label="Volver al detalle">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold">Captura de resultados</h1>
+    <div className="space-y-6 pb-24">
+      {/* Header */}
+      <div className="space-y-4">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link to={`/admin/ordenes/${order.code}`}>
+            <ArrowLeft /> Volver al detalle
+          </Link>
+        </Button>
+
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">Captura de resultados</h1>
               <Badge variant={meta.variant}>{meta.label}</Badge>
             </div>
-            <p className="text-sm text-muted-foreground">
-              <span className="font-mono">{order.code}</span> ·{' '}
-              {order.patient.lastName}, {order.patient.firstName} ·{' '}
-              <span className="font-mono text-xs">{order.patient.documentNumber}</span>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="font-mono font-medium text-foreground">{order.code}</span>
+              <span className="mx-2 text-border">·</span>
+              {order.patient.lastName}, {order.patient.firstName}
+              <span className="mx-2 text-border">·</span>
+              <span className="font-mono tabular-nums">{order.patient.documentNumber}</span>
             </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1.5 text-xs ${statusMeta.className}`}>
-            <StatusIcon
-              className={`h-4 w-4 ${autosave.status === 'saving' ? 'animate-spin' : ''}`}
-            />
-            <span>{statusMeta.label}</span>
-            {autosave.lastSavedAt && autosave.status !== 'saving' && (
-              <span className="text-muted-foreground">
-                · {formatDateTime(new Date(autosave.lastSavedAt))}
-              </span>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void handleSaveNow()}
-            disabled={!editable || !autosave.hasPending || autosave.status === 'saving'}
-          >
-            <Save className="h-4 w-4" /> Guardar ahora
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => void handleValidate()}
-            disabled={!allFilled || !editable || validateMut.isPending}
-          >
-            <ClipboardCheck className="h-4 w-4" />
-            {validateMut.isPending ? 'Validando...' : 'Validar orden'}
-          </Button>
-        </div>
       </div>
 
+      {/* Progress + autosave status */}
+      <Card>
+        <CardContent className="space-y-3 p-4 sm:p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Progreso de captura
+              </div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-2xl font-semibold tabular-nums">
+                  {itemsWithResult}
+                  <span className="text-base text-muted-foreground">/{total}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {allFilled
+                    ? 'lista para validar'
+                    : `${remaining} ${remaining === 1 ? 'prueba pendiente' : 'pruebas pendientes'}`}
+                </span>
+              </div>
+            </div>
+
+            <div className={cn('flex items-center gap-1.5 text-xs', statusMeta.className)}>
+              <StatusIcon className={cn('size-4', statusMeta.spin && 'animate-spin')} />
+              <span className="font-medium">{statusMeta.label}</span>
+              {autosave.lastSavedAt && autosave.status !== 'saving' && (
+                <span className="text-muted-foreground">
+                  · {formatDateTime(new Date(autosave.lastSavedAt))}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className={cn(
+                'h-full rounded-full transition-all duration-500 ease-out',
+                allFilled ? 'bg-success' : 'bg-primary',
+              )}
+              style={{ width: `${progress}%` }}
+              aria-hidden
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Read-only banner */}
       {!editable && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          La orden esta en estado &quot;{meta.label.toLowerCase()}&quot;: los resultados son solo de
-          lectura.
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
+          <Lock className="mt-0.5 size-4 shrink-0 text-warning-foreground" aria-hidden />
+          <div>
+            <p className="font-medium text-warning-foreground">Modo solo lectura</p>
+            <p className="mt-0.5 text-xs text-warning-foreground/80">
+              La orden esta en estado &quot;{meta.label.toLowerCase()}&quot;. No se pueden modificar
+              resultados.
+            </p>
+          </div>
         </div>
       )}
 
+      {/* Info banner sobre autosave */}
+      {editable && (
+        <div className="flex items-start gap-3 rounded-lg border border-info/30 bg-info/5 px-4 py-3 text-sm">
+          <Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden />
+          <div className="space-y-0.5">
+            <p className="text-foreground">
+              <span className="font-medium">Autoguardado activo.</span> Los cambios se persisten
+              cada 10 s o al pulsar &quot;Guardar ahora&quot;.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              El flag (normal / alto / bajo / critico) se recalcula en el servidor con cada save
+              segun la edad y el sexo del paciente.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tabla de pruebas */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Pruebas de la orden
-            <Badge variant="muted" className="font-normal">
-              {itemsWithResult}/{total} con resultado
-            </Badge>
-            {tests.isLoading && (
-              <span className="text-xs text-muted-foreground">cargando opciones...</span>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Los cambios se guardan automaticamente cada 10 s o cuando pulses &quot;Guardar ahora&quot;.
-            El flag (normal / alto / bajo / critico) se recalcula en el servidor con cada save.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto rounded-md border">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="p-3 text-left w-[110px]">Codigo</th>
-                  <th className="p-3 text-left">Prueba</th>
-                  <th className="p-3 text-left w-[200px]">Valor</th>
-                  <th className="p-3 text-left w-[110px]">Flag</th>
-                  <th className="p-3 text-left">Observacion</th>
+              <thead className="bg-muted/40">
+                <tr className="border-b border-border">
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-[110px]">
+                    Codigo
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Prueba
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-[200px]">
+                    Valor
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-[110px]">
+                    Flag
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Observacion
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -289,7 +329,7 @@ export default function ResultadosPage() {
                 })}
                 {order.items.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">
+                    <td colSpan={5} className="p-10 text-center text-sm text-muted-foreground">
                       La orden no tiene pruebas todavia.
                     </td>
                   </tr>
@@ -300,11 +340,44 @@ export default function ResultadosPage() {
         </CardContent>
       </Card>
 
-      {!allFilled && total > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Faltan {total - itemsWithResult} {total - itemsWithResult === 1 ? 'prueba' : 'pruebas'}{' '}
-          por completar antes de poder validar.
-        </p>
+      {/* Sticky action bar al pie */}
+      {editable && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:left-64">
+          <div className="container flex items-center justify-between gap-3 py-3">
+            <div className="text-xs text-muted-foreground">
+              {allFilled ? (
+                <span className="flex items-center gap-1.5 text-success">
+                  <CheckCircle2 className="size-3.5" />
+                  Todas las pruebas tienen resultado. Lista para validar.
+                </span>
+              ) : (
+                <>
+                  Faltan{' '}
+                  <span className="font-semibold tabular-nums text-foreground">{remaining}</span>{' '}
+                  {remaining === 1 ? 'prueba' : 'pruebas'} antes de poder validar.
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleSaveNow()}
+                disabled={!autosave.hasPending || autosave.status === 'saving'}
+              >
+                <Save /> Guardar ahora
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => void handleValidate()}
+                disabled={!allFilled || validateMut.isPending}
+              >
+                {validateMut.isPending ? <Loader2 className="animate-spin" /> : <ClipboardCheck />}
+                {validateMut.isPending ? 'Validando...' : 'Validar orden'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
