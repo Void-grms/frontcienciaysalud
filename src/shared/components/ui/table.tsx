@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Inbox } from 'lucide-react';
 
 import { cn } from '@shared/lib/cn';
 
@@ -15,7 +16,11 @@ export const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn('[&_tr]:border-b', className)} {...props} />
+  <thead
+    ref={ref}
+    className={cn('bg-muted/40 [&_tr]:border-b [&_tr]:border-border', className)}
+    {...props}
+  />
 ));
 TableHeader.displayName = 'TableHeader';
 
@@ -32,7 +37,7 @@ export const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttribut
     <tr
       ref={ref}
       className={cn(
-        'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+        'border-b border-border transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted',
         className,
       )}
       {...props}
@@ -41,31 +46,50 @@ export const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttribut
 );
 TableRow.displayName = 'TableRow';
 
-export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...props }, ref) => (
-    <th
-      ref={ref}
-      className={cn(
-        'h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground',
-        className,
-      )}
-      {...props}
-    />
-  ),
-);
+export const TableHead = React.forwardRef<
+  HTMLTableCellElement,
+  React.ThHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <th
+    ref={ref}
+    className={cn(
+      'h-10 px-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wider text-muted-foreground',
+      className,
+    )}
+    {...props}
+  />
+));
 TableHead.displayName = 'TableHead';
 
-export const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn('p-3 align-middle', className)} {...props} />
-  ),
-);
+export const TableCell = React.forwardRef<
+  HTMLTableCellElement,
+  React.TdHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <td ref={ref} className={cn('px-3 py-2.5 align-middle', className)} {...props} />
+));
 TableCell.displayName = 'TableCell';
 
-export const TableEmpty = ({ colSpan, children }: { colSpan: number; children: React.ReactNode }) => (
+interface TableEmptyProps {
+  colSpan: number;
+  children: React.ReactNode;
+  /** Cuando se setea, muestra un icono custom encima del texto. Default: Inbox. */
+  icon?: typeof Inbox;
+  /** Si true, no se renderiza el icono (loading inicial donde el icono distrae). */
+  iconHidden?: boolean;
+}
+
+export const TableEmpty = ({
+  colSpan,
+  children,
+  icon: Icon = Inbox,
+  iconHidden,
+}: TableEmptyProps) => (
   <tr>
-    <td colSpan={colSpan} className="p-8 text-center text-sm text-muted-foreground">
-      {children}
+    <td colSpan={colSpan} className="px-3 py-10">
+      <div className="mx-auto flex max-w-sm flex-col items-center justify-center gap-2 text-center">
+        {!iconHidden && <Icon className="size-6 text-muted-foreground/60" aria-hidden />}
+        <p className="text-sm text-muted-foreground">{children}</p>
+      </div>
     </td>
   </tr>
 );

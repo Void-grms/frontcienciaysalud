@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import { KeyRound, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { KeyRound, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@shared/components/ui/badge';
 import { Button } from '@shared/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@shared/components/ui/card';
+import { Card, CardContent } from '@shared/components/ui/card';
 import { Input } from '@shared/components/ui/input';
+import { PageHeader } from '@shared/components/page-header';
 import {
   Select,
   SelectContent,
@@ -74,6 +69,18 @@ function calcAge(birthDate: string | null): string {
   return `${age} a`;
 }
 
+function patientInitials(p: Patient): string {
+  const f = p.firstName?.[0] ?? '';
+  const l = p.lastName?.[0] ?? '';
+  return (f + l).toUpperCase() || '?';
+}
+
+function sexLabel(sex: string | null | undefined): string {
+  if (sex === 'M') return 'Masculino';
+  if (sex === 'F') return 'Femenino';
+  return 'Sin especificar';
+}
+
 export default function PacientesPage() {
   const [search, setSearch] = useState('');
   const [documentType, setDocumentType] = useState<'all' | DocumentType>('all');
@@ -128,32 +135,37 @@ export default function PacientesPage() {
     }
   };
 
+  const total = query.data?.total ?? 0;
+  const hasFilters = debouncedSearch !== '' || documentType !== 'all';
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Pacientes</h1>
-        <p className="text-sm text-muted-foreground">
-          Registro maestro de pacientes. Desde aqui se puede crear el acceso al portal del paciente
-          (login con DNI + contrasena temporal).
-        </p>
-      </div>
+      <PageHeader
+        title="Pacientes"
+        description="Registro maestro de pacientes. Desde aqui se genera el acceso al portal del paciente (login con DNI + contrasena temporal)."
+        meta={
+          query.data && (
+            <Badge variant="subtle">
+              {total} {total === 1 ? 'paciente registrado' : 'pacientes registrados'}
+            </Badge>
+          )
+        }
+        actions={
+          <Button onClick={openCreate}>
+            <Plus /> Nuevo paciente
+          </Button>
+        }
+      />
 
       <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Lista de pacientes</CardTitle>
-            <CardDescription>
-              {query.data ? `${query.data.total} pacientes registrados` : 'Cargando...'}
-            </CardDescription>
-          </div>
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Nuevo paciente
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          {/* Filtros */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 value={search}
                 onChange={(e) => {
@@ -161,7 +173,8 @@ export default function PacientesPage() {
                   setPage(1);
                 }}
                 placeholder="Buscar por nombre, apellido o documento..."
-                className="pl-8"
+                className="pl-9"
+                aria-label="Buscar pacientes"
               />
             </div>
             <Select
@@ -184,81 +197,102 @@ export default function PacientesPage() {
             </Select>
           </div>
 
-          <div className="rounded-md border">
+          {/* Tabla */}
+          <div className="overflow-hidden rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[150px]">Documento</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="hidden md:table-cell">Email / Telefono</TableHead>
+                  <TableHead className="w-[180px]">Documento</TableHead>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead className="hidden md:table-cell">Contacto</TableHead>
                   <TableHead className="w-[80px] text-right">Edad</TableHead>
                   <TableHead className="w-[140px] text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {query.isLoading ? (
-                  <TableEmpty colSpan={5}>Cargando...</TableEmpty>
+                  <TableEmpty colSpan={5} iconHidden>
+                    Cargando pacientes...
+                  </TableEmpty>
                 ) : query.isError ? (
                   <TableEmpty colSpan={5}>No se pudieron cargar los pacientes.</TableEmpty>
                 ) : query.data?.items.length === 0 ? (
-                  <TableEmpty colSpan={5}>No hay pacientes para los filtros actuales.</TableEmpty>
+                  <TableEmpty colSpan={5} icon={Users}>
+                    {hasFilters
+                      ? 'No hay pacientes para los filtros aplicados.'
+                      : 'Aun no hay pacientes registrados. Crea el primero con "Nuevo paciente".'}
+                  </TableEmpty>
                 ) : (
                   query.data?.items.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="font-mono">
+                          <Badge variant="outline" className="font-mono text-[10px]">
                             {p.documentType}
                           </Badge>
-                          <span className="font-mono text-xs">{p.documentNumber}</span>
+                          <span className="font-mono text-xs tabular-nums">
+                            {p.documentNumber}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">
-                          {p.lastName}, {p.firstName}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-50 text-[11px] font-semibold text-primary-700"
+                            aria-hidden
+                          >
+                            {patientInitials(p)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">
+                              {p.lastName}, {p.firstName}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {sexLabel(p.sex)}
+                            </div>
+                          </div>
                         </div>
-                        {p.sex && (
-                          <span className="text-xs text-muted-foreground">
-                            {p.sex === 'M' ? 'Masculino' : p.sex === 'F' ? 'Femenino' : 'Ambiguo'}
-                          </span>
-                        )}
                       </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        <div className="space-y-0.5 text-xs">
-                          {p.email && <div>{p.email}</div>}
-                          {p.phone && <div>{p.phone}</div>}
-                          {!p.email && !p.phone && <span>—</span>}
+                      <TableCell className="hidden md:table-cell">
+                        <div className="space-y-0.5 text-xs leading-tight text-muted-foreground">
+                          {p.email && <div className="truncate">{p.email}</div>}
+                          {p.phone && <div className="tabular-nums">{p.phone}</div>}
+                          {!p.email && !p.phone && (
+                            <span className="text-muted-foreground/60">—</span>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right text-sm tabular-nums">
+                      <TableCell className="text-right text-sm tabular-nums text-muted-foreground">
                         {calcAge(p.birthDate)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-0.5">
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="icon-sm"
                             onClick={() => setPendingPortal(p)}
                             aria-label={`Resetear acceso al portal de ${p.firstName}`}
                             title="Crear o resetear acceso al portal"
                           >
-                            <KeyRound className="h-4 w-4 text-amber-600" />
+                            <KeyRound className="text-warning-foreground" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="icon-sm"
                             onClick={() => openEdit(p)}
                             aria-label={`Editar ${p.firstName}`}
+                            title="Editar paciente"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="icon-sm"
                             onClick={() => setPendingDelete(p)}
                             aria-label={`Eliminar ${p.firstName}`}
+                            title="Eliminar paciente"
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
@@ -269,7 +303,7 @@ export default function PacientesPage() {
             </Table>
           </div>
 
-          {query.data && (
+          {query.data && query.data.items.length > 0 && (
             <Pager
               page={query.data.page}
               perPage={query.data.perPage}
