@@ -95,8 +95,10 @@ export function useIdleTimer(enabled: boolean, onTimeout: () => void): IdleTimer
       if (remaining <= WARNING_BEFORE_MS) {
         setShowWarning(true);
         setSecondsToLogout(Math.ceil(remaining / 1000));
-      } else if (showWarning) {
-        // El usuario interactuo y el timer ya esta lejos del limite → cerrar modal.
+      } else {
+        // El usuario interactuo y el timer ya esta lejos del limite → cerrar
+        // modal. React hace bail-out si el valor no cambia, asi que llamarlo
+        // siempre que `remaining > WARNING_BEFORE_MS` es seguro.
         setShowWarning(false);
       }
 
@@ -116,7 +118,11 @@ export function useIdleTimer(enabled: boolean, onTimeout: () => void): IdleTimer
       ACTIVITY_EVENTS.forEach((ev) => document.removeEventListener(ev, onActivity));
       window.clearInterval(tick);
     };
-  }, [enabled, onTimeout, showWarning]);
+    // `showWarning` NO debe ir aqui: incluirlo remonta el effect en cada toggle,
+    // re-suscribe listeners, resetea `lastActivityRef.current` a Date.now() y
+    // produce parpadeo del modal. Leemos `showWarning` solo via setState (bail-out).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, onTimeout]);
 
   return { showWarning, secondsToLogout, extend };
 }
