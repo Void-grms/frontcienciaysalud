@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, FileText, RefreshCcw } from 'lucide-react';
+import { Download, FileText, Loader2, RefreshCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@shared/components/ui/badge';
@@ -71,63 +71,93 @@ export function OrderReportCard({ order }: OrderReportCardProps) {
     }
   };
 
+  const latestVersion = versions.data?.[0];
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" /> Informe PDF
-        </CardTitle>
-        <CardDescription>
-          {available
-            ? 'El informe se genera bajo demanda. Cada regeneracion crea una nueva version con hash SHA-256 para trazabilidad.'
-            : `Disponible cuando la orden este validada. Estado actual: ${order.state}.`}
-        </CardDescription>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="size-4 text-muted-foreground" />
+              Informe PDF
+              {available && latestVersion && (
+                <Badge variant="subtle">v{latestVersion.version}</Badge>
+              )}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              {available
+                ? 'Generado bajo demanda. Cada regeneracion crea una nueva version con hash SHA-256 para trazabilidad.'
+                : 'Disponible cuando la orden este validada.'}
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => void handleOpen()} disabled={!available || downloading}>
-            <FileText className="h-4 w-4" /> Ver PDF
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => void handleDownload()}
-            disabled={!available || downloading}
-          >
-            <Download className="h-4 w-4" />
-            {downloading ? 'Descargando...' : 'Descargar'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => void handleRegenerate()}
-            disabled={!available || regenerateMut.isPending}
-          >
-            <RefreshCcw className="h-4 w-4" />
-            {regenerateMut.isPending ? 'Regenerando...' : 'Regenerar version'}
-          </Button>
-        </div>
-
-        {available && versions.data && versions.data.length > 0 && (
-          <div className="rounded-md border bg-muted/30 p-3">
-            <h4 className="mb-2 text-sm font-medium">Historial de versiones</h4>
-            <ul className="space-y-1.5">
-              {versions.data.map((v) => (
-                <li
-                  key={v.id}
-                  className="flex items-center justify-between gap-3 rounded border bg-background px-3 py-2 text-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">v{v.version}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDateTime(v.generatedAt)}
-                    </span>
-                  </div>
-                  <code className="hidden truncate font-mono text-[11px] text-muted-foreground sm:inline">
-                    {v.hashSha256.slice(0, 16)}…
-                  </code>
-                </li>
-              ))}
-            </ul>
+        {!available ? (
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
+            El informe se generara automaticamente al validar la orden.
           </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => void handleOpen()} disabled={downloading}>
+                <FileText /> Ver PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleDownload()}
+                disabled={downloading}
+              >
+                {downloading ? <Loader2 className="animate-spin" /> : <Download />}
+                {downloading ? 'Descargando...' : 'Descargar'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleRegenerate()}
+                disabled={regenerateMut.isPending}
+              >
+                {regenerateMut.isPending ? <Loader2 className="animate-spin" /> : <RefreshCcw />}
+                {regenerateMut.isPending ? 'Regenerando...' : 'Regenerar version'}
+              </Button>
+            </div>
+
+            {versions.data && versions.data.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Historial de versiones
+                </h4>
+                <ul className="space-y-1">
+                  {versions.data.map((v, idx) => (
+                    <li
+                      key={v.id}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 text-sm"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Badge variant={idx === 0 ? 'subtle' : 'outline'}>v{v.version}</Badge>
+                        {idx === 0 && (
+                          <span className="text-[10px] uppercase tracking-wider text-success">
+                            actual
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {formatDateTime(v.generatedAt)}
+                        </span>
+                      </div>
+                      <code
+                        className="hidden truncate font-mono text-[11px] text-muted-foreground sm:inline"
+                        title={v.hashSha256}
+                      >
+                        {v.hashSha256.slice(0, 16)}…
+                      </code>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

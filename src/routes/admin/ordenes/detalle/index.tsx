@@ -4,22 +4,19 @@ import {
   ArrowLeft,
   ClipboardCheck,
   FileSpreadsheet,
+  Info,
+  Loader2,
   Plus,
   RefreshCcw,
   Send,
+  User,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@shared/components/ui/badge';
 import { Button } from '@shared/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@shared/components/ui/card';
+import { Card, CardContent } from '@shared/components/ui/card';
 import { formatDate, formatDateTime } from '@shared/lib/format-date';
 import { reportFormError } from '@shared/lib/report-error';
 
@@ -47,7 +44,18 @@ function ageFromBirthDate(birthDate: string | null): string {
   let age = now.getFullYear() - b.getFullYear();
   const m = now.getMonth() - b.getMonth();
   if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
-  return `${age} anios`;
+  return `${age} anos`;
+}
+
+function patientInitials(firstName: string, lastName: string): string {
+  return ((firstName[0] ?? '') + (lastName[0] ?? '')).toUpperCase() || '?';
+}
+
+function sexLabel(sex: string | null | undefined): string {
+  if (sex === 'M') return 'Masculino';
+  if (sex === 'F') return 'Femenino';
+  if (sex === 'A') return 'Ambiguo';
+  return '—';
 }
 
 export default function OrdenDetailPage() {
@@ -66,18 +74,19 @@ export default function OrdenDetailPage() {
 
   if (query.isLoading) {
     return (
-      <div className="space-y-6">
-        <p className="text-sm text-muted-foreground">Cargando orden...</p>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        Cargando orden...
       </div>
     );
   }
 
   if (query.isError || !query.data) {
     return (
-      <div className="space-y-6">
-        <Button asChild variant="ghost" size="sm">
+      <div className="space-y-4">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link to="/admin/ordenes">
-            <ArrowLeft className="h-4 w-4" /> Volver
+            <ArrowLeft /> Volver a ordenes
           </Link>
         </Button>
         <p className="text-sm text-destructive">No se pudo cargar la orden.</p>
@@ -135,34 +144,41 @@ export default function OrdenDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <Button asChild variant="ghost" size="icon">
-            <Link to="/admin/ordenes" aria-label="Volver">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="font-mono text-2xl font-semibold">{order.code}</h1>
-              <Badge variant={meta.variant}>{meta.label}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Creada {formatDateTime(order.createdAt)}
-              {order.createdBy?.fullName ? ` · ${order.createdBy.fullName}` : ''}
-            </p>
+      {/* Back link */}
+      <Button asChild variant="ghost" size="sm" className="-ml-2">
+        <Link to="/admin/ordenes">
+          <ArrowLeft /> Volver a ordenes
+        </Link>
+      </Button>
+
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-mono text-2xl font-semibold tracking-tight">{order.code}</h1>
+            <Badge variant={meta.variant}>{meta.label}</Badge>
+            {order.previousOrderId && <Badge variant="warning">Enmienda</Badge>}
           </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Creada {formatDateTime(order.createdAt)}
+            {order.createdBy?.fullName && (
+              <>
+                <span className="mx-2 text-border">·</span>
+                por {order.createdBy.fullName}
+              </>
+            )}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="outline" size="sm">
             <Link to={`/admin/ordenes/${order.code}/resultados`}>
-              <FileSpreadsheet className="h-4 w-4" /> Capturar resultados
+              <FileSpreadsheet /> Capturar resultados
             </Link>
           </Button>
           {itemsEditable && (
             <Button variant="outline" size="sm" onClick={() => setAddItemsOpen(true)}>
-              <Plus className="h-4 w-4" /> Agregar pruebas
+              <Plus /> Agregar pruebas
             </Button>
           )}
           {canValidate && (
@@ -171,7 +187,7 @@ export default function OrdenDetailPage() {
               onClick={() => void handleValidate()}
               disabled={validateMut.isPending}
             >
-              <ClipboardCheck className="h-4 w-4" />
+              {validateMut.isPending ? <Loader2 className="animate-spin" /> : <ClipboardCheck />}
               {validateMut.isPending ? 'Validando...' : 'Validar'}
             </Button>
           )}
@@ -181,96 +197,115 @@ export default function OrdenDetailPage() {
               onClick={() => void handleDeliver()}
               disabled={deliverMut.isPending}
             >
-              <Send className="h-4 w-4" />
+              {deliverMut.isPending ? <Loader2 className="animate-spin" /> : <Send />}
               {deliverMut.isPending ? 'Entregando...' : 'Entregar'}
             </Button>
           )}
           {canAmend && (
             <Button variant="outline" size="sm" onClick={() => setAmendOpen(true)}>
-              <RefreshCcw className="h-4 w-4" /> Enmendar
+              <RefreshCcw /> Enmendar
             </Button>
           )}
           {canCancel && (
             <Button variant="outline" size="sm" onClick={() => setCancelOpen(true)}>
-              <XCircle className="h-4 w-4 text-destructive" /> Anular
+              <XCircle className="text-destructive" /> Anular
             </Button>
           )}
         </div>
       </div>
 
+      {/* Banner de enmienda */}
       {order.previousOrderId && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm">
-          Esta orden es una enmienda de una orden anterior. Los resultados originales fueron
-          copiados al crearse; puedes ajustarlos antes de validar.
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
+          <Info className="mt-0.5 size-4 shrink-0 text-warning-foreground" aria-hidden />
+          <div>
+            <p className="font-medium text-warning-foreground">Orden enmendada</p>
+            <p className="mt-0.5 text-xs text-warning-foreground/80">
+              Esta orden es una enmienda de una orden anterior. Los resultados originales fueron
+              copiados al crearse; puedes ajustarlos antes de validar.
+            </p>
+          </div>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Grid de contenido */}
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* Tarjeta del paciente */}
         <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Paciente</CardTitle>
-            <CardDescription>
-              <Link
-                to={`/admin/pacientes?focus=${order.patient.id}`}
-                className="text-primary hover:underline"
+          <CardContent className="p-5 sm:p-6">
+            {/* Header con avatar */}
+            <div className="flex items-start gap-3 pb-4">
+              <div
+                className="grid size-12 shrink-0 place-items-center rounded-full bg-primary-50 text-base font-semibold text-primary-700"
+                aria-hidden
               >
-                Ver ficha completa
-              </Link>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-2 text-sm">
-              <div>
-                <dt className="text-xs text-muted-foreground">Nombre</dt>
-                <dd className="font-medium">
-                  {order.patient.lastName}, {order.patient.firstName}
-                </dd>
+                {patientInitials(order.patient.firstName, order.patient.lastName)}
               </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Documento</dt>
-                <dd className="font-mono">
-                  {order.patient.documentType} {order.patient.documentNumber}
-                </dd>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <dt className="text-xs text-muted-foreground">Nacimiento</dt>
-                  <dd>{formatDate(order.patient.birthDate)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">Edad</dt>
-                  <dd>{ageFromBirthDate(order.patient.birthDate)}</dd>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-base font-semibold leading-tight">
+                  {order.patient.firstName} {order.patient.lastName}
+                </h2>
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <User className="size-3" />
+                  <span className="font-mono tabular-nums">
+                    {order.patient.documentType} {order.patient.documentNumber}
+                  </span>
                 </div>
               </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Sexo</dt>
-                <dd>
-                  {order.patient.sex === 'M'
-                    ? 'Masculino'
-                    : order.patient.sex === 'F'
-                      ? 'Femenino'
-                      : order.patient.sex === 'A'
-                        ? 'Ambiguo'
-                        : '—'}
-                </dd>
-              </div>
-              {order.patient.email && (
+            </div>
+
+            <div className="border-t border-border pt-4">
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
                 <div>
-                  <dt className="text-xs text-muted-foreground">Email</dt>
-                  <dd className="truncate">{order.patient.email}</dd>
+                  <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Nacimiento
+                  </dt>
+                  <dd className="mt-0.5 tabular-nums">{formatDate(order.patient.birthDate)}</dd>
                 </div>
-              )}
-              {order.patient.phone && (
                 <div>
-                  <dt className="text-xs text-muted-foreground">Telefono</dt>
-                  <dd>{order.patient.phone}</dd>
+                  <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Edad
+                  </dt>
+                  <dd className="mt-0.5 font-medium tabular-nums">
+                    {ageFromBirthDate(order.patient.birthDate)}
+                  </dd>
                 </div>
-              )}
-            </dl>
+                <div className="col-span-2">
+                  <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Sexo
+                  </dt>
+                  <dd className="mt-0.5">{sexLabel(order.patient.sex)}</dd>
+                </div>
+                {order.patient.email && (
+                  <div className="col-span-2">
+                    <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Email
+                    </dt>
+                    <dd className="mt-0.5 truncate text-xs">{order.patient.email}</dd>
+                  </div>
+                )}
+                {order.patient.phone && (
+                  <div className="col-span-2">
+                    <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Telefono
+                    </dt>
+                    <dd className="mt-0.5 tabular-nums">{order.patient.phone}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+
+            <div className="mt-5 border-t border-border pt-4">
+              <Button asChild variant="ghost" size="sm" className="-ml-2 text-primary hover:text-primary-700">
+                <Link to={`/admin/pacientes?focus=${order.patient.id}`}>
+                  Ver ficha completa →
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="space-y-6 lg:col-span-2">
+        <div className="space-y-5 lg:col-span-2">
           <OrderMetadataCard order={order} />
           <OrderItemsCard order={order} />
           <OrderReportCard order={order} />
@@ -279,11 +314,7 @@ export default function OrdenDetailPage() {
 
       <OrderTimelineCard order={order} />
 
-      <AddItemsDialog
-        orderId={order.id}
-        open={addItemsOpen}
-        onOpenChange={setAddItemsOpen}
-      />
+      <AddItemsDialog orderId={order.id} open={addItemsOpen} onOpenChange={setAddItemsOpen} />
 
       <ReasonDialog
         open={cancelOpen}

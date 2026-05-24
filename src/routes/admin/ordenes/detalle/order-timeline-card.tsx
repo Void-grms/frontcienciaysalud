@@ -1,4 +1,4 @@
-import { CalendarClock, Check, FileCheck, Send, XCircle } from 'lucide-react';
+import { CalendarClock, Check, Clock, FileCheck, Send, XCircle } from 'lucide-react';
 
 import {
   Card,
@@ -17,14 +17,26 @@ interface TimelineEvent {
   at: string | null;
   by?: string | null;
   reason?: string | null;
+  tone: 'default' | 'success' | 'warning' | 'destructive';
 }
 
-// Reconstruimos un timeline simple a partir de los timestamps del propio detail
-// (no exponemos el OrderEvent table en el endpoint actual). Aprovechamos
-// `createdAt`, `validatedAt`, `deliveredAt`, `cancelledAt` y `stateReason`.
 interface OrderTimelineCardProps {
   order: OrderDetail;
 }
+
+const TONE_BG: Record<TimelineEvent['tone'], string> = {
+  default: 'bg-primary-50 text-primary-700 ring-primary-100',
+  success: 'bg-success/10 text-success ring-success/20',
+  warning: 'bg-warning/15 text-warning-foreground ring-warning/30',
+  destructive: 'bg-destructive/10 text-destructive ring-destructive/20',
+};
+
+const TONE_LINE: Record<TimelineEvent['tone'], string> = {
+  default: 'bg-primary-100',
+  success: 'bg-success/30',
+  warning: 'bg-warning/30',
+  destructive: 'bg-destructive/30',
+};
 
 export function OrderTimelineCard({ order }: OrderTimelineCardProps) {
   const events: TimelineEvent[] = [
@@ -33,6 +45,7 @@ export function OrderTimelineCard({ order }: OrderTimelineCardProps) {
       label: 'Orden creada',
       at: order.createdAt,
       by: order.createdBy?.fullName ?? order.createdBy?.email ?? null,
+      tone: 'default',
     },
     ...(order.validatedAt
       ? [
@@ -41,11 +54,19 @@ export function OrderTimelineCard({ order }: OrderTimelineCardProps) {
             label: 'Validada',
             at: order.validatedAt,
             by: order.validatedBy?.fullName ?? order.validatedBy?.email ?? null,
+            tone: 'success' as const,
           },
         ]
       : []),
     ...(order.deliveredAt
-      ? [{ icon: Send, label: 'Entregada al paciente', at: order.deliveredAt }]
+      ? [
+          {
+            icon: Send,
+            label: 'Entregada al paciente',
+            at: order.deliveredAt,
+            tone: 'success' as const,
+          },
+        ]
       : []),
     ...(order.cancelledAt
       ? [
@@ -54,6 +75,7 @@ export function OrderTimelineCard({ order }: OrderTimelineCardProps) {
             label: 'Anulada',
             at: order.cancelledAt,
             reason: order.stateReason,
+            tone: 'destructive' as const,
           },
         ]
       : []),
@@ -64,6 +86,7 @@ export function OrderTimelineCard({ order }: OrderTimelineCardProps) {
             label: 'Reemplazada por una enmienda',
             at: null,
             reason: order.stateReason,
+            tone: 'warning' as const,
           },
         ]
       : []),
@@ -71,28 +94,50 @@ export function OrderTimelineCard({ order }: OrderTimelineCardProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Historial</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="size-4 text-muted-foreground" />
+          Historial
+        </CardTitle>
         <CardDescription>Eventos principales de la orden.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ol className="space-y-3">
+        <ol className="relative space-y-5">
           {events.map((e, idx) => {
             const Icon = e.icon;
+            const isLast = idx === events.length - 1;
             return (
-              <li key={idx} className="flex gap-3">
-                <div className="mt-0.5 rounded-full border bg-muted p-1.5">
-                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+              <li key={idx} className="relative flex gap-3">
+                {/* Linea vertical conectora */}
+                {!isLast && (
+                  <div
+                    className={`absolute left-[15px] top-9 h-[calc(100%+0.5rem)] w-px ${TONE_LINE[e.tone]}`}
+                    aria-hidden
+                  />
+                )}
+                {/* Icono circular */}
+                <div
+                  className={`relative z-10 grid size-8 shrink-0 place-items-center rounded-full ring-1 ring-inset ${TONE_BG[e.tone]}`}
+                  aria-hidden
+                >
+                  <Icon className="size-4" />
                 </div>
-                <div className="flex-1 text-sm">
-                  <div className="font-medium">{e.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {e.at ? formatDateTime(e.at) : 'sin fecha'}
-                    {e.by ? ` · ${e.by}` : ''}
+                <div className="min-w-0 flex-1 pt-1">
+                  <div className="text-sm font-medium leading-tight">{e.label}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="tabular-nums">
+                      {e.at ? formatDateTime(e.at) : 'sin fecha'}
+                    </span>
+                    {e.by && (
+                      <>
+                        <span className="text-border">·</span>
+                        <span>{e.by}</span>
+                      </>
+                    )}
                   </div>
                   {e.reason && (
-                    <div className="mt-1 rounded border bg-muted/40 px-2 py-1 text-xs italic">
-                      {e.reason}
+                    <div className="mt-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-xs italic text-muted-foreground">
+                      “{e.reason}”
                     </div>
                   )}
                 </div>

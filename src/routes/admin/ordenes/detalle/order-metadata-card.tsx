@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Save } from 'lucide-react';
+import { ClipboardList, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@shared/components/ui/button';
@@ -110,25 +110,36 @@ export function OrderMetadataCard({ order }: OrderMetadataCardProps) {
     // Modo solo lectura: mostramos los datos tal cual estan.
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Datos de la orden</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardList className="size-4 text-muted-foreground" />
+            Datos de la orden
+          </CardTitle>
           <CardDescription>
             En estado &quot;{order.state}&quot; los metadatos quedan congelados.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <dl className="grid gap-4 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-xs text-muted-foreground">Referencia</dt>
-              <dd>{order.reference?.name ?? '—'}</dd>
+              <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Referencia
+              </dt>
+              <dd className="mt-0.5">{order.reference?.name ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Medico solicitante</dt>
-              <dd>{order.requestingDoctor ?? '—'}</dd>
+              <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Medico solicitante
+              </dt>
+              <dd className="mt-0.5">{order.requestingDoctor ?? '—'}</dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-xs text-muted-foreground">Informacion clinica</dt>
-              <dd className="whitespace-pre-wrap">{order.clinicalInfo ?? '—'}</dd>
+              <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Informacion clinica
+              </dt>
+              <dd className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed">
+                {order.clinicalInfo ?? <span className="text-muted-foreground">—</span>}
+              </dd>
             </div>
           </dl>
         </CardContent>
@@ -138,29 +149,33 @@ export function OrderMetadataCard({ order }: OrderMetadataCardProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Datos de la orden</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <ClipboardList className="size-4 text-muted-foreground" />
+          Datos de la orden
+        </CardTitle>
         <CardDescription>
           Editables mientras la orden este en borrador o en proceso.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label>Referencia (opcional)</Label>
           <ReferencePicker selected={reference} onSelect={setReference} />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
             <Label htmlFor="doctor">Medico solicitante</Label>
             <Input
               id="doctor"
               value={requestingDoctor}
               onChange={(e) => setRequestingDoctor(e.target.value)}
               maxLength={180}
+              placeholder="Nombre del medico"
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="sampleTakenAt">Toma de muestra</Label>
             <Input
               id="sampleTakenAt"
@@ -171,7 +186,7 @@ export function OrderMetadataCard({ order }: OrderMetadataCardProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="clinicalInfo">Informacion clinica</Label>
           <Textarea
             id="clinicalInfo"
@@ -179,12 +194,16 @@ export function OrderMetadataCard({ order }: OrderMetadataCardProps) {
             value={clinicalInfo}
             onChange={(e) => setClinicalInfo(e.target.value)}
             maxLength={2000}
+            placeholder="Sintomas, diagnostico, medicacion, ayuno, etc."
           />
+          <p className="text-[11px] text-muted-foreground">
+            {clinicalInfo.length}/2000 caracteres
+          </p>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-1">
           <Button onClick={() => void handleSave()} disabled={updateMut.isPending}>
-            <Save className="h-4 w-4" />
+            {updateMut.isPending ? <Loader2 className="animate-spin" /> : <Save />}
             {updateMut.isPending ? 'Guardando...' : 'Guardar cambios'}
           </Button>
         </div>
