@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Building2, Loader2, Search, X } from 'lucide-react';
 
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -25,55 +25,88 @@ export function ReferencePicker({ selected, onSelect }: ReferencePickerProps) {
 
   if (selected) {
     return (
-      <div className="flex items-center gap-3 rounded-md border px-3 py-2">
-        <div className="flex-1 min-w-0">
-          <div className="font-medium">{selected.name}</div>
+      <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+        <div
+          className="grid size-8 shrink-0 place-items-center rounded-md bg-primary-50 text-primary-700"
+          aria-hidden
+        >
+          <Building2 className="size-4" />
+        </div>
+        <div className="min-w-0 flex-1 leading-tight">
+          <div className="truncate font-medium">{selected.name}</div>
           {selected.taxId && (
-            <div className="text-xs text-muted-foreground">RUC {selected.taxId}</div>
+            <div className="truncate font-mono text-[11px] text-muted-foreground tabular-nums">
+              RUC {selected.taxId}
+            </div>
           )}
         </div>
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           onClick={() => onSelect(null)}
           aria-label="Quitar referencia"
+          title="Quitar referencia"
         >
-          <X className="h-4 w-4" />
+          <X />
         </Button>
       </div>
     );
   }
 
+  const items = query.data?.items ?? [];
+  const showList = !!debouncedSearch || items.length > 0;
+
   return (
     <div className="space-y-2">
       <div className="relative">
-        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search
+          className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar referencia (opcional)..."
-          className="pl-8"
+          placeholder="Buscar clinica o medico referente (opcional)..."
+          className="pl-9"
+          aria-label="Buscar referencia"
         />
+        {query.isFetching && (
+          <Loader2
+            className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground"
+            aria-hidden
+          />
+        )}
       </div>
-      {(debouncedSearch || query.data?.items.length) && (
-        <ul className="max-h-60 space-y-1 overflow-y-auto rounded-md border bg-background">
+
+      {showList && (
+        <ul className="max-h-60 overflow-y-auto rounded-lg border border-border bg-card">
           {query.isLoading && (
-            <li className="px-3 py-2 text-sm text-muted-foreground">Cargando...</li>
+            <li className="px-3 py-3 text-sm text-muted-foreground">Cargando...</li>
           )}
-          {!query.isLoading && query.data?.items.length === 0 && (
-            <li className="px-3 py-2 text-sm text-muted-foreground">Sin coincidencias.</li>
+          {!query.isLoading && items.length === 0 && (
+            <li className="px-3 py-4 text-center text-sm text-muted-foreground">
+              Sin coincidencias.
+            </li>
           )}
-          {query.data?.items.map((r) => (
-            <li key={r.id}>
+          {items.map((r) => (
+            <li key={r.id} className="border-b border-border last:border-b-0">
               <button
                 type="button"
                 onClick={() => onSelect(r)}
-                className="flex w-full items-center gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-accent"
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium">{r.name}</div>
+                <div
+                  className="grid size-8 shrink-0 place-items-center rounded-md bg-primary-50 text-primary-700"
+                  aria-hidden
+                >
+                  <Building2 className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{r.name}</div>
                   {r.taxId && (
-                    <div className="text-xs text-muted-foreground">RUC {r.taxId}</div>
+                    <div className="truncate font-mono text-[11px] text-muted-foreground tabular-nums">
+                      RUC {r.taxId}
+                    </div>
                   )}
                 </div>
               </button>
