@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { AlertCircle, Building2, Loader2, Mail, Phone } from 'lucide-react';
 
 import { Button } from '@shared/components/ui/button';
 import {
@@ -48,6 +49,24 @@ interface ReferenceDialogProps {
   onOpenChange: (open: boolean) => void;
   reference: ReferenceListItem | null;
   onCreated?: (id: string) => void;
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="flex items-center gap-1 text-xs text-destructive" role="alert">
+      <AlertCircle className="size-3" />
+      {message}
+    </p>
+  );
+}
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      {children}
+    </div>
+  );
 }
 
 export function ReferenceDialog({
@@ -117,67 +136,131 @@ export function ReferenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar referencia' : 'Nueva referencia'}</DialogTitle>
-          <DialogDescription>
-            Una referencia agrupa una entidad externa (clinica, policlinico, medico independiente)
-            que puede tener uno o mas usuarios con acceso al portal de referencias.
-          </DialogDescription>
+          <div className="flex items-center gap-2.5">
+            <div
+              className="grid size-9 place-items-center rounded-md bg-primary-50 text-primary-700"
+              aria-hidden
+            >
+              <Building2 className="size-4" />
+            </div>
+            <div>
+              <DialogTitle>{isEditing ? 'Editar referencia' : 'Nueva referencia'}</DialogTitle>
+              <DialogDescription>
+                Entidad externa (clinica, policlinico, medico) que puede tener uno o mas usuarios
+                con acceso a su portal.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2 col-span-2 sm:col-span-1">
-              <Label htmlFor="name">Razon social *</Label>
-              <Input id="name" autoComplete="off" {...form.register('name')} />
-              {form.formState.errors.name && (
-                <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-              )}
+        <form onSubmit={onSubmit} className="space-y-5">
+          <section className="space-y-3">
+            <SectionHeader>Identidad</SectionHeader>
+            <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Razon social *</Label>
+                <Input
+                  id="name"
+                  autoComplete="organization"
+                  placeholder="Clinica San Pablo"
+                  {...form.register('name')}
+                  aria-invalid={!!form.formState.errors.name || undefined}
+                />
+                <FieldError message={form.formState.errors.name?.message} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="taxId">RUC / Tax ID</Label>
+                <Input
+                  id="taxId"
+                  autoComplete="off"
+                  className="font-mono tabular-nums"
+                  placeholder="20123456789"
+                  {...form.register('taxId')}
+                  aria-invalid={!!form.formState.errors.taxId || undefined}
+                />
+                <FieldError message={form.formState.errors.taxId?.message} />
+              </div>
             </div>
-            <div className="space-y-2 col-span-2 sm:col-span-1">
-              <Label htmlFor="taxId">RUC / Tax ID</Label>
-              <Input id="taxId" autoComplete="off" {...form.register('taxId')} />
-              {form.formState.errors.taxId && (
-                <p className="text-xs text-destructive">{form.formState.errors.taxId.message}</p>
-              )}
-            </div>
-          </div>
+          </section>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="contactName">Contacto</Label>
-              <Input id="contactName" {...form.register('contactName')} />
+          <section className="space-y-3">
+            <SectionHeader>Contacto principal (opcional)</SectionHeader>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="contactName">Nombre del contacto</Label>
+                <Input
+                  id="contactName"
+                  autoComplete="name"
+                  placeholder="Dr. Juan Perez"
+                  {...form.register('contactName')}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="contactEmail">Email</Label>
+                  <div className="relative">
+                    <Mail
+                      className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <Input
+                      id="contactEmail"
+                      type="email"
+                      autoComplete="email"
+                      className="pl-9"
+                      placeholder="contacto@clinica.com"
+                      {...form.register('contactEmail')}
+                      aria-invalid={!!form.formState.errors.contactEmail || undefined}
+                    />
+                  </div>
+                  <FieldError message={form.formState.errors.contactEmail?.message} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="contactPhone">Telefono</Label>
+                  <div className="relative">
+                    <Phone
+                      className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <Input
+                      id="contactPhone"
+                      type="tel"
+                      autoComplete="tel"
+                      className="pl-9 tabular-nums"
+                      placeholder="+51 999 999 999"
+                      {...form.register('contactPhone')}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="address">Direccion</Label>
+                <Input
+                  id="address"
+                  autoComplete="street-address"
+                  placeholder="Av. Principal 123"
+                  {...form.register('address')}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="contactEmail">Email contacto</Label>
-              <Input
-                id="contactEmail"
-                type="email"
-                autoComplete="email"
-                {...form.register('contactEmail')}
+          </section>
+
+          <section className="space-y-3">
+            <SectionHeader>Notas internas</SectionHeader>
+            <div className="space-y-1.5">
+              <Textarea
+                id="notes"
+                rows={2}
+                placeholder="Convenios, tarifarios, observaciones del lab..."
+                {...form.register('notes')}
               />
-              {form.formState.errors.contactEmail && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.contactEmail.message}
-                </p>
-              )}
+              <p className="text-[11px] text-muted-foreground">
+                Solo visibles para el personal del laboratorio.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="contactPhone">Telefono contacto</Label>
-              <Input id="contactPhone" autoComplete="tel" {...form.register('contactPhone')} />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="address">Direccion</Label>
-            <Input id="address" {...form.register('address')} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas internas</Label>
-            <Textarea id="notes" rows={2} {...form.register('notes')} />
-          </div>
+          </section>
 
           <DialogFooter>
             <Button
@@ -189,6 +272,7 @@ export function ReferenceDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={submitting}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear referencia'}
             </Button>
           </DialogFooter>

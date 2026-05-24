@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { Upload, X } from 'lucide-react';
+import { AlertCircle, FileSignature, Loader2, Stethoscope, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -128,52 +128,80 @@ export function ProfessionalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar profesional' : 'Nuevo profesional'}</DialogTitle>
-          <DialogDescription>
-            El profesional firma los informes. La imagen de firma (PNG o JPG, max 500 KB) se
-            incrusta en el PDF generado.
-          </DialogDescription>
+          <div className="flex items-center gap-2.5">
+            <div
+              className="grid size-9 place-items-center rounded-md bg-primary-50 text-primary-700"
+              aria-hidden
+            >
+              <Stethoscope className="size-4" />
+            </div>
+            <div>
+              <DialogTitle>
+                {isEditing ? 'Editar profesional' : 'Nuevo profesional'}
+              </DialogTitle>
+              <DialogDescription>
+                Firmante de informes. La imagen de firma se incrusta al final del PDF.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Nombre completo *</Label>
-            <Input
-              id="fullName"
-              autoComplete="off"
-              placeholder="MSc. Maria Lopez"
-              {...form.register('fullName')}
-            />
-            {form.formState.errors.fullName && (
-              <p className="text-xs text-destructive">{form.formState.errors.fullName.message}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="professionalTitle">Titulo</Label>
-              <Input
-                id="professionalTitle"
-                placeholder="Bioquimica"
-                {...form.register('professionalTitle')}
-              />
+        <form onSubmit={onSubmit} className="space-y-5">
+          <section className="space-y-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Datos profesionales
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="licenseNumber">Colegiatura</Label>
-              <Input
-                id="licenseNumber"
-                placeholder="CBP-12345"
-                {...form.register('licenseNumber')}
-              />
-            </div>
-          </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName">Nombre completo *</Label>
+                <Input
+                  id="fullName"
+                  autoComplete="off"
+                  placeholder="MSc. Maria Lopez"
+                  {...form.register('fullName')}
+                  aria-invalid={!!form.formState.errors.fullName || undefined}
+                />
+                {form.formState.errors.fullName && (
+                  <p className="flex items-center gap-1 text-xs text-destructive" role="alert">
+                    <AlertCircle className="size-3" />
+                    {form.formState.errors.fullName.message}
+                  </p>
+                )}
+              </div>
 
-          <div className="space-y-2">
-            <Label>Firma digital</Label>
-            <div className="flex items-start gap-3 rounded-md border bg-muted/30 p-3">
-              <div className="flex h-24 w-40 items-center justify-center overflow-hidden rounded border bg-background">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="professionalTitle">Titulo</Label>
+                  <Input
+                    id="professionalTitle"
+                    placeholder="Bioquimica"
+                    {...form.register('professionalTitle')}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="licenseNumber">Colegiatura</Label>
+                  <Input
+                    id="licenseNumber"
+                    placeholder="CBP-12345"
+                    className="font-mono tabular-nums"
+                    {...form.register('licenseNumber')}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <FileSignature className="size-3" /> Firma digital
+              </span>
+            </div>
+
+            <div className="flex flex-col items-stretch gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:flex-row">
+              <div className="flex h-24 w-full items-center justify-center overflow-hidden rounded-md border border-border bg-card sm:w-44">
                 {preview ? (
                   <img
                     src={preview}
@@ -181,7 +209,7 @@ export function ProfessionalDialog({
                     className="max-h-full max-w-full object-contain"
                   />
                 ) : (
-                  <span className="text-xs text-muted-foreground">Sin firma</span>
+                  <span className="text-xs text-muted-foreground/60">Sin firma</span>
                 )}
               </div>
               <div className="flex-1 space-y-2">
@@ -192,34 +220,38 @@ export function ProfessionalDialog({
                   className="hidden"
                   onChange={(e) => handleFile(e.target.files?.[0])}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4" /> Subir imagen
-                </Button>
-                {pendingSignature && (
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setPendingSignature(null);
-                      setPreview(storageUrl(professional?.signatureStorageKey ?? null));
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    <X className="h-4 w-4" /> Descartar cambio
+                    <Upload /> {preview ? 'Reemplazar' : 'Subir imagen'}
                   </Button>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  PNG o JPG · maximo 500 KB. Fondo transparente recomendado.
+                  {pendingSignature && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setPendingSignature(null);
+                        setPreview(storageUrl(professional?.signatureStorageKey ?? null));
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                    >
+                      <X /> Descartar
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  PNG o JPG · maximo 500 KB.
+                  <br />
+                  Fondo transparente recomendado, firma en negro.
                 </p>
               </div>
             </div>
-          </div>
+          </section>
 
           <DialogFooter>
             <Button
@@ -231,6 +263,7 @@ export function ProfessionalDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={submitting}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear profesional'}
             </Button>
           </DialogFooter>
