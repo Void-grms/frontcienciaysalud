@@ -6,7 +6,9 @@ export const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
     <div
       ref={ref}
       className={cn(
-        'rounded-lg border border-border bg-card text-card-foreground shadow-xs',
+        // Border + sombra mas pronunciada para que el card se separe del
+        // fondo claro y no parezca "fundido" con la pagina.
+        'rounded-lg border border-border-strong/70 bg-card text-card-foreground shadow-sm',
         className,
       )}
       {...props}
@@ -19,7 +21,9 @@ export const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex flex-col space-y-1.5 p-5 sm:p-6', className)}
+      // Padding superior generoso: el header del card no debe quedar pegado
+      // al borde. pt-6/pt-7 da aire visible entre el border y el titulo.
+      className={cn('flex flex-col space-y-1.5 p-5 pt-6 sm:p-6 sm:pt-7', className)}
       {...props}
     />
   ),
