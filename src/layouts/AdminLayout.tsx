@@ -168,7 +168,9 @@ export default function AdminLayout() {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto bg-background">
-          <div className="container py-6 lg:py-8">
+          {/* Padding superior generoso para que el primer card no quede pegado
+              al sticky header (h-14). py-8/py-10 da ~32-40px de aire. */}
+          <div className="container py-8 lg:py-10">
             <Outlet />
           </div>
         </main>

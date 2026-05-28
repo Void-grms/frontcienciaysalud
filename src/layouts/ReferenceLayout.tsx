@@ -80,7 +80,7 @@ export default function ReferenceLayout() {
         </div>
       </nav>
 
-      <main className="flex-1 py-6 lg:py-8">
+      <main className="flex-1 py-8 lg:py-10">
         <div className="container">
           <Outlet />
         </div>
