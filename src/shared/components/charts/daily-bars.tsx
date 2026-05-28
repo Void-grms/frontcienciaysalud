@@ -16,6 +16,15 @@ interface DailyBarsProps {
   height?: number;
 }
 
+// Padding interno del SVG para que los ticks del eje Y y los labels de fecha
+// no se corten contra los bordes.
+const TOP_PADDING = 12;
+const BOTTOM_PADDING = 24;
+const Y_AXIS_WIDTH = 40;
+// Ancho minimo por grupo (par de barras + gap). Asi con pocos puntos los
+// labels de fecha "05-26" no se superponen.
+const MIN_GROUP_TOTAL = 48;
+
 export function DailyBars({ data, height = 200 }: DailyBarsProps) {
   const chart = useMemo(() => {
     if (data.length === 0) {
@@ -25,22 +34,25 @@ export function DailyBars({ data, height = 200 }: DailyBarsProps) {
     const groupGap = 4;
     const interGroupGap = 6;
     const groupWidth = barWidth * 2 + groupGap;
-    const width = data.length * (groupWidth + interGroupGap);
+    // Si los grupos quedan muy juntos (pocos puntos en el rango), expandimos
+    // para que cada uno tenga al menos `MIN_GROUP_TOTAL` px de horizontal.
+    const groupTotal = Math.max(groupWidth + interGroupGap, MIN_GROUP_TOTAL);
+    const width = data.length * groupTotal;
 
     const max = Math.max(1, ...data.map((p) => Math.max(p.created, p.delivered)));
     // Redondeamos el max para que el tope sea un numero "limpio" (5, 10, 25, 50, 100...).
     const niceMax = niceCeil(max);
-    const plotHeight = height - 36;
+    const plotHeight = height - TOP_PADDING - BOTTOM_PADDING;
 
     const bars = data.map((p, i) => {
-      const x = i * (groupWidth + interGroupGap);
+      const x = i * groupTotal;
       const createdH = (p.created / niceMax) * plotHeight;
       const deliveredH = (p.delivered / niceMax) * plotHeight;
       return { ...p, x, createdH, deliveredH };
     });
 
     const ticks = [0, Math.round(niceMax / 2), niceMax];
-    return { width, bars, max: niceMax, ticks, plotHeight };
+    return { width, bars, max: niceMax, ticks, plotHeight, groupWidth, groupTotal };
   }, [data, height]);
 
   if (!chart) {
@@ -51,11 +63,19 @@ export function DailyBars({ data, height = 200 }: DailyBarsProps) {
     );
   }
 
-  const { width, bars, max, ticks, plotHeight } = chart;
+  const { width, bars, max, ticks, plotHeight, groupWidth, groupTotal } = chart;
   const totals = bars.reduce(
     (acc, b) => ({ created: acc.created + b.created, delivered: acc.delivered + b.delivered }),
     { created: 0, delivered: 0 },
   );
+
+  // Mostramos el label de fecha solo cada N grupos para que no se aglomeren.
+  // Con MIN_GROUP_TOTAL ~ 48px y ancho real del texto ~30px, podemos mostrar
+  // todos si grupos son grandes y skipear si son chicos.
+  const labelStep = groupTotal >= 36 ? 1 : Math.ceil(bars.length / 8);
+
+  const totalWidth = width + Y_AXIS_WIDTH;
+  const totalHeight = height;
 
   return (
     <div>
@@ -77,31 +97,34 @@ export function DailyBars({ data, height = 200 }: DailyBarsProps) {
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-1">
+      <div className="overflow-x-auto overflow-y-hidden pb-1">
         <svg
-          width={width + 44}
-          height={height}
+          width={totalWidth}
+          height={totalHeight}
+          viewBox={`0 0 ${totalWidth} ${totalHeight}`}
           className="block"
           role="img"
           aria-label="Grafico diario de ordenes creadas vs entregadas"
         >
-          {/* Ticks Y + gridlines */}
+          {/* Ticks Y + gridlines. y se desplaza por TOP_PADDING para que el
+              tick superior no quede pegado al borde del SVG. */}
           {ticks.map((t, idx) => {
-            const y = plotHeight - (t / max) * plotHeight;
+            const y = TOP_PADDING + plotHeight - (t / max) * plotHeight;
             return (
               <g key={idx}>
                 <line
-                  x1={36}
+                  x1={Y_AXIS_WIDTH - 4}
                   y1={y}
-                  x2={width + 44}
+                  x2={totalWidth}
                   y2={y}
                   className="stroke-border"
                   strokeDasharray={t === 0 ? undefined : '2 3'}
                 />
                 <text
-                  x={30}
-                  y={y + 3}
+                  x={Y_AXIS_WIDTH - 8}
+                  y={y}
                   textAnchor="end"
+                  dominantBaseline="middle"
                   className="fill-muted-foreground text-[10px] tabular-nums"
                 >
                   {t}
@@ -111,9 +134,9 @@ export function DailyBars({ data, height = 200 }: DailyBarsProps) {
           })}
 
           {/* Barras */}
-          <g transform="translate(44, 0)">
+          <g transform={`translate(${Y_AXIS_WIDTH}, ${TOP_PADDING})`}>
             {bars.map((b, i) => {
-              const showLabel = i === 0 || i === bars.length - 1 || i % Math.ceil(bars.length / 8) === 0;
+              const showLabel = i === 0 || i === bars.length - 1 || i % labelStep === 0;
               return (
                 <g key={b.date} className="group">
                   <rect
@@ -134,8 +157,8 @@ export function DailyBars({ data, height = 200 }: DailyBarsProps) {
                   />
                   {showLabel && (
                     <text
-                      x={b.x + 8}
-                      y={height - 12}
+                      x={b.x + groupWidth / 2}
+                      y={plotHeight + 14}
                       textAnchor="middle"
                       className="fill-muted-foreground text-[9px] tabular-nums"
                     >
