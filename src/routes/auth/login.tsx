@@ -218,25 +218,26 @@ export default function LoginPage() {
           aria-hidden
         />
 
-        {/* Logo arriba a la izquierda */}
+        {/* Logo arriba a la izquierda — blanco con drop-shadow para contraste
+            sobre el fondo claro de la imagen. */}
         <div
           className="relative z-10 flex items-center gap-2.5 p-8 animate-fade-in"
           style={{ animationDelay: '50ms' }}
         >
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/90 text-primary-700 shadow-sm ring-1 ring-primary-100 backdrop-blur">
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/90 text-primary-700 shadow-md ring-1 ring-primary-100 backdrop-blur">
             <FlaskConical className="size-5" />
           </div>
-          <span className="text-lg font-semibold tracking-tight text-primary-700 drop-shadow-sm">
+          <span className="text-xl font-bold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
             Lab Clínico
           </span>
         </div>
 
-        {/* Chat bubble flotante: posicionada arriba-cerca del cientifico
-            (su cabeza esta aprox. al 45% horizontal, 35% vertical del panel).
-            El bubble vive a su izquierda con el triangulito apuntando hacia
-            la cabeza (derecha-abajo), simulando que el cientifico "habla". */}
+        {/* Chat bubble flotante: a la DERECHA del cientifico (su cabeza esta
+            aprox. al 45% horizontal). El triangulito esta en el borde
+            inferior-izquierdo y apunta hacia el cientifico, simulando que el
+            cientifico "habla" hacia la derecha de la escena. */}
         <div
-          className="absolute left-[6%] top-[14%] z-10 max-w-[44%] animate-fade-in xl:top-[12%]"
+          className="absolute right-[5%] top-[16%] z-10 w-[46%] max-w-md animate-fade-in xl:top-[14%]"
           style={{ animationDelay: '200ms' }}
         >
           <MascotChatBubble stage={stage} msg={msg} variant="floating" />
@@ -498,42 +499,44 @@ function MascotChatBubble({ stage, msg, variant = 'floating' }: MascotProps) {
     );
   }
 
-  // Floating: globo de dialogo que "sale" del cientifico (triangulito en la
-  // esquina inferior-derecha apuntando hacia donde esta su cabeza).
+  // Floating: globo de dialogo a la DERECHA del cientifico — el triangulito
+  // esta en la esquina inferior-izquierda y apunta hacia su cabeza (que esta
+  // mas abajo y a la izquierda). Es mas grande (p-5, text-base) para que se
+  // lea bien sobre la ilustracion.
   return (
     <div
       className={cn(
-        'relative rounded-2xl rounded-br-sm bg-white/95 px-4 py-3 shadow-lg ring-1 ring-border/60 backdrop-blur transition-all',
+        'relative rounded-3xl rounded-bl-sm bg-white/95 px-5 py-4 shadow-xl ring-1 ring-border/50 backdrop-blur transition-all',
         stage === 'success' && 'animate-mascot-pop',
       )}
     >
-      {/* Triangulito inferior-derecho, apuntando hacia abajo-derecha (hacia
+      {/* Triangulito inferior-izquierdo, apuntando hacia abajo-izquierda (hacia
           la cabeza del cientifico). */}
       <span
-        className="absolute -bottom-1 right-6 size-2 rotate-45 bg-white/95"
+        className="absolute -bottom-1 left-6 size-3 rotate-45 bg-white/95"
         aria-hidden
       />
-      <div key={stage} className="flex items-start gap-2.5 animate-fade-in">
+      <div key={stage} className="flex items-start gap-3 animate-fade-in">
         <span
           className={cn(
-            'mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-primary-50 text-primary-700 ring-1 ring-primary-100',
+            'mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary-50 text-primary-700 ring-1 ring-primary-100 shadow-sm',
             stage === 'submitting' && 'animate-pulse',
           )}
           aria-hidden
         >
           <StageIcon
             className={cn(
-              'size-3.5',
+              'size-4',
               stage === 'submitting' && 'animate-spin',
               stage === 'success' && 'text-success',
             )}
           />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">
+          <p className="text-base font-semibold text-foreground leading-tight">
             {msg.title} <span className="ml-0.5">{msg.emoji}</span>
           </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{msg.body}</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{msg.body}</p>
         </div>
       </div>
     </div>
