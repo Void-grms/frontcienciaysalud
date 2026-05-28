@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,14 +8,14 @@ import {
   Activity,
   AlertCircle,
   ArrowRight,
+  CheckCircle2,
   Eye,
   EyeOff,
-  FileSignature,
+  FlaskConical,
   KeyRound,
   Loader2,
   Lock,
-  ShieldCheck,
-  Stethoscope,
+  TestTubes,
   User,
 } from 'lucide-react';
 
@@ -33,34 +33,71 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const FEATURES = [
-  {
-    icon: ShieldCheck,
-    title: 'Informes con firma digital',
-    body: 'Cada PDF lleva un QR de verificacion publica — cualquier institucion puede confirmar autenticidad sin login.',
+// Etapas que conducen el mensaje de la mascota y los estados visuales.
+type Stage =
+  | 'idle'
+  | 'typing_email'
+  | 'email_ok'
+  | 'typing_password'
+  | 'password_ok'
+  | 'submitting'
+  | 'success'
+  | 'error';
+
+const STAGE_MESSAGES: Record<Stage, { emoji: string; title: string; body: string }> = {
+  idle: {
+    emoji: '👋',
+    title: '¡Bienvenido!',
+    body: 'Ingresa tus credenciales para acceder al sistema del laboratorio.',
   },
-  {
-    icon: Activity,
-    title: 'Banderas automaticas',
-    body: 'Los valores fuera de rango se marcan como alto, bajo o critico segun la edad y sexo del paciente.',
+  typing_email: {
+    emoji: '✏️',
+    title: 'Te escucho',
+    body: 'Sigue escribiendo tu email o número de documento.',
   },
-  {
-    icon: FileSignature,
-    title: 'Auditoria completa',
-    body: 'Cada login, edicion y entrega queda registrada — listo para inspecciones sanitarias.',
+  email_ok: {
+    emoji: '👏',
+    title: 'Vamos bien',
+    body: 'Solo falta tu contraseña para acceder al sistema.',
   },
-  {
-    icon: Stethoscope,
-    title: 'Acceso diferenciado',
-    body: 'Portales separados para admin, pacientes y clinicas de referencia. Cada uno solo ve lo que le corresponde.',
+  typing_password: {
+    emoji: '🔐',
+    title: 'Casi',
+    body: 'Tu contraseña debe tener al menos 6 caracteres.',
   },
-];
+  password_ok: {
+    emoji: '✨',
+    title: 'Todo listo',
+    body: 'Presiona "Entrar" para acceder al sistema.',
+  },
+  submitting: {
+    emoji: '🧪',
+    title: 'Casi listo',
+    body: 'Verificamos tus credenciales para darte acceso.',
+  },
+  success: {
+    emoji: '✅',
+    title: '¡Listo!',
+    body: 'Bienvenido de nuevo al sistema del laboratorio.',
+  },
+  error: {
+    emoji: '🤔',
+    title: 'Hmm…',
+    body: 'No pudimos validar esas credenciales. Inténtalo otra vez.',
+  },
+};
 
 function greetingForHour(hour: number): string {
   if (hour < 6) return 'Buenas noches';
   if (hour < 12) return 'Buenos dias';
   if (hour < 19) return 'Buenas tardes';
   return 'Buenas noches';
+}
+
+function isIdentifierValid(v: string): boolean {
+  if (!v) return false;
+  // Email valido O documento numerico de 6+ digitos.
+  return /^.+@.+\..+$/.test(v) || /^\d{6,}$/.test(v);
 }
 
 export default function LoginPage() {
@@ -71,30 +108,38 @@ export default function LoginPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [capsLockOn, setCapsLockOn] = useState(false);
-  const [featureIdx, setFeatureIdx] = useState(0);
   const [greeting, setGreeting] = useState(() => greetingForHour(new Date().getHours()));
+  const [forcedStage, setForcedStage] = useState<Stage | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onChange',
     defaultValues: { identifier: '', password: '' },
   });
 
   const identifier = form.watch('identifier');
-  const inferredKind = (() => {
+  const password = form.watch('password');
+
+  const identifierOk = useMemo(() => isIdentifierValid(identifier), [identifier]);
+  const passwordOk = password.length >= 6;
+
+  const inferredKind: 'email' | 'patient' | null = (() => {
     if (!identifier) return null;
-    if (identifier.includes('@')) return 'admin-or-reference';
+    if (identifier.includes('@')) return 'email';
     if (/^\d{6,}$/.test(identifier)) return 'patient';
     return null;
   })();
 
-  // Rotacion del carrusel cada 6s. Solo si no esta isAuthenticating para
-  // evitar timers huerfanos. Pausa por hover via CSS data-pause si necesario.
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setFeatureIdx((i) => (i + 1) % FEATURES.length);
-    }, 6000);
-    return () => window.clearInterval(id);
-  }, []);
+  // Stage derivado: success/error/submitting tienen prioridad (los gatilla el submit).
+  const stage: Stage = (() => {
+    if (forcedStage) return forcedStage;
+    if (form.formState.isSubmitting) return 'submitting';
+    if (!identifier) return 'idle';
+    if (!identifierOk) return 'typing_email';
+    if (!password) return 'email_ok';
+    if (!passwordOk) return 'typing_password';
+    return 'password_ok';
+  })();
 
   // Refresca el saludo si el usuario abre la pestana en otro horario.
   useEffect(() => {
@@ -111,9 +156,16 @@ export default function LoginPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       const u = await login(values.identifier, values.password);
+      setForcedStage('success');
       toast.success(`Bienvenido${u.fullName ? `, ${u.fullName}` : ''}`);
+      // Pequeño delay para que el usuario vea el mensaje "¡Listo!" antes de navegar.
+      await new Promise((res) => setTimeout(res, 650));
       navigate(from ?? defaultPathForRole(u.role), { replace: true });
     } catch (err) {
+      setForcedStage('error');
+      // Reseteamos el stage forzado tras unos segundos para que el usuario pueda volver
+      // a intentar y vea los mensajes reactivos normales.
+      window.setTimeout(() => setForcedStage(null), 2500);
       if (err instanceof ApiError) {
         toast.error(err.title, { description: err.detail });
         if (err.status === 401) {
@@ -129,81 +181,61 @@ export default function LoginPage() {
     setCapsLockOn(e.getModifierState('CapsLock'));
   };
 
-  const currentFeature = FEATURES[featureIdx]!;
-  const FeatureIcon = currentFeature.icon;
+  const msg = STAGE_MESSAGES[stage];
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[1fr_minmax(420px,_520px)]">
-      {/* Panel izquierdo: branding + carrusel. Solo desktop. */}
+      {/* Panel izquierdo: escena de laboratorio + mascota reactiva. Solo desktop. */}
       <div className="relative hidden overflow-hidden bg-primary-700 text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12">
-        {/* Mesh gradient animado de fondo. Conic-gradient + blur + animacion lenta
-            para que no distraiga pero de sensacion de movimiento. */}
+        {/* Mesh gradient animado de fondo. */}
         <div className="absolute inset-0" aria-hidden>
-          <div className="absolute -left-1/4 -top-1/4 size-[120%] animate-mesh-spin opacity-50 blur-3xl"
-               style={{
-                 background:
-                   'conic-gradient(from 0deg at 50% 50%, hsl(173 90% 50% / 0.5), hsl(180 85% 40% / 0.4), hsl(165 80% 35% / 0.5), hsl(190 90% 45% / 0.4), hsl(173 90% 50% / 0.5))',
-               }}
+          <div
+            className="absolute -left-1/4 -top-1/4 size-[120%] animate-mesh-spin opacity-50 blur-3xl"
+            style={{
+              background:
+                'conic-gradient(from 0deg at 50% 50%, hsl(173 90% 50% / 0.5), hsl(180 85% 40% / 0.4), hsl(165 80% 35% / 0.5), hsl(190 90% 45% / 0.4), hsl(173 90% 50% / 0.5))',
+            }}
           />
         </div>
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.06] mask-radial-fade" aria-hidden />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary-700 to-transparent" aria-hidden />
 
+        {/* Decoraciones flotantes — frascos / ADN sutiles. */}
+        <FloatingLabDecor />
+
         {/* Logo */}
-        <div className="relative z-10 flex items-center gap-2.5 animate-fade-in" style={{ animationDelay: '50ms' }}>
+        <div
+          className="relative z-10 flex items-center gap-2.5 animate-fade-in"
+          style={{ animationDelay: '50ms' }}
+        >
           <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15 backdrop-blur ring-1 ring-white/20">
-            <Activity className="size-5" />
+            <FlaskConical className="size-5" />
           </div>
           <span className="text-lg font-semibold tracking-tight">Lab Clinico</span>
         </div>
 
-        {/* Mensaje principal */}
-        <div className="relative z-10 max-w-md space-y-6 animate-fade-in" style={{ animationDelay: '150ms' }}>
+        {/* Centro: saludo grande + mascota con chat bubble reactiva */}
+        <div
+          className="relative z-10 max-w-md space-y-7 animate-fade-in"
+          style={{ animationDelay: '150ms' }}
+        >
           <div className="space-y-3">
             <p className="text-sm font-medium text-primary-foreground/70">{greeting}.</p>
             <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-              El sistema clinico que tu equipo necesita,{' '}
-              <span className="text-primary-foreground/80">cada dia.</span>
+              El laboratorio clínico,{' '}
+              <span className="text-primary-foreground/80">en tus manos.</span>
             </h1>
-            <p className="text-base text-primary-foreground/80">
-              Pacientes, ordenes, resultados y entrega de informes firmados — todo en un solo
-              sistema, con auditoria completa de cada accion.
-            </p>
           </div>
 
-          {/* Carrusel de features con fade entre items */}
-          <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
-            <div className="flex items-start gap-3">
-              <div className="grid size-9 shrink-0 place-items-center rounded-md bg-white/10 ring-1 ring-white/15">
-                <FeatureIcon className="size-4.5" />
-              </div>
-              <div key={featureIdx} className="min-w-0 flex-1 animate-fade-in">
-                <h3 className="text-sm font-semibold">{currentFeature.title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-primary-foreground/75">
-                  {currentFeature.body}
-                </p>
-              </div>
-            </div>
-            {/* Dots */}
-            <div className="mt-5 flex items-center gap-1.5">
-              {FEATURES.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setFeatureIdx(i)}
-                  aria-label={`Ver caracteristica ${i + 1} de ${FEATURES.length}`}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all duration-300',
-                    i === featureIdx ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/50',
-                  )}
-                />
-              ))}
-            </div>
-          </div>
+          {/* Mascota + chat bubble — se anima cuando cambia el stage */}
+          <MascotChatBubble stage={stage} msg={msg} />
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 flex items-center justify-between text-xs text-primary-foreground/60 animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <div
+          className="relative z-10 flex items-center justify-between text-xs text-primary-foreground/60 animate-fade-in"
+          style={{ animationDelay: '300ms' }}
+        >
           <span>© {new Date().getFullYear()} Lab Clinico</span>
           <span className="flex items-center gap-1.5">
             <span className="size-1.5 rounded-full bg-success animate-pulse" />
@@ -214,20 +246,24 @@ export default function LoginPage() {
 
       {/* Panel derecho: formulario. */}
       <div className="relative flex min-h-screen flex-col justify-center bg-background px-6 py-12 sm:px-12">
-        {/* Sutil pattern en mobile cuando no hay panel izquierdo */}
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.4] mask-radial-fade lg:hidden" aria-hidden />
 
         <div className="relative mx-auto w-full max-w-sm space-y-8 animate-fade-in">
           {/* Logo solo mobile */}
           <div className="flex items-center gap-2.5 lg:hidden">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <Activity className="size-5" />
+              <FlaskConical className="size-5" />
             </div>
             <span className="text-lg font-semibold tracking-tight">Lab Clinico</span>
           </div>
 
+          {/* Chat bubble visible en mobile (donde no hay panel izquierdo). */}
+          <div className="lg:hidden">
+            <MascotChatBubble stage={stage} msg={msg} variant="light" />
+          </div>
+
           <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
-            <h2 className="text-2xl font-semibold tracking-tight">Iniciar sesion</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h2>
             <p className="text-sm text-muted-foreground">
               Ingresa tus credenciales para acceder al sistema.
             </p>
@@ -241,7 +277,7 @@ export default function LoginPage() {
           >
             {/* Identifier */}
             <div className="space-y-1.5">
-              <Label htmlFor="identifier">Email o numero de documento</Label>
+              <Label htmlFor="identifier">Email o número de documento</Label>
               <div className="relative">
                 <User
                   className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors peer-focus:text-primary"
@@ -250,19 +286,30 @@ export default function LoginPage() {
                 <Input
                   id="identifier"
                   autoComplete="username"
-                  placeholder="admin@laboratorio.com"
-                  className="peer pl-9"
+                  placeholder="ejemplo@labclinico.com"
+                  className={cn(
+                    'peer pl-9 pr-20 transition-colors',
+                    identifierOk && 'border-success/50 focus-visible:border-success',
+                  )}
                   autoFocus
+                  disabled={stage === 'submitting' || stage === 'success'}
                   {...form.register('identifier')}
                   aria-invalid={!!form.formState.errors.identifier || undefined}
                 />
-                {inferredKind && (
+                {/* Badge tipo (Email / Paciente) — solo cuando no se muestra el check */}
+                {inferredKind && !identifierOk && (
                   <span
                     className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-medium text-primary-700"
                     aria-live="polite"
                   >
                     {inferredKind === 'patient' ? 'Paciente' : 'Email'}
                   </span>
+                )}
+                {identifierOk && (
+                  <CheckCircle2
+                    className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-success animate-fade-in"
+                    aria-label="Formato válido"
+                  />
                 )}
               </div>
               {form.formState.errors.identifier ? (
@@ -272,7 +319,7 @@ export default function LoginPage() {
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Los pacientes ingresan con su numero de documento.
+                  Los pacientes ingresan con su número de documento.
                 </p>
               )}
             </div>
@@ -280,12 +327,13 @@ export default function LoginPage() {
             {/* Password */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Contrasena</Label>
+                <Label htmlFor="password">Contraseña</Label>
                 <Link
                   to="/recuperar-contrasena"
                   className="text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:underline"
+                  tabIndex={stage === 'submitting' ? -1 : 0}
                 >
-                  Olvide mi contrasena
+                  ¿Olvidaste tu contraseña?
                 </Link>
               </div>
               <div className="relative">
@@ -297,9 +345,14 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className="peer pl-9 pr-10"
+                  placeholder="Ingresa tu contraseña"
+                  className={cn(
+                    'peer pl-9 pr-10 transition-colors',
+                    passwordOk && 'border-success/50 focus-visible:border-success',
+                  )}
                   onKeyDown={handlePasswordKey}
                   onKeyUp={handlePasswordKey}
+                  disabled={stage === 'submitting' || stage === 'success'}
                   {...form.register('password')}
                   aria-invalid={!!form.formState.errors.password || undefined}
                 />
@@ -307,18 +360,18 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:shadow-ring"
-                  aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
 
-              {/* Caps lock warning */}
+              {/* Estado dinamico debajo de la contrasena */}
               {capsLockOn && (
                 <p className="flex items-center gap-1 text-xs text-warning-foreground animate-fade-in">
                   <KeyRound className="size-3" />
-                  Bloq Mayus esta activado.
+                  Bloq Mayús está activado.
                 </p>
               )}
               {form.formState.errors.password && (
@@ -327,18 +380,32 @@ export default function LoginPage() {
                   {form.formState.errors.password.message}
                 </p>
               )}
+              {!form.formState.errors.password && stage === 'submitting' && (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground animate-fade-in">
+                  <Loader2 className="size-3 animate-spin" />
+                  Verificando credenciales…
+                </p>
+              )}
             </div>
 
             <Button
               type="submit"
               size="lg"
-              className="group w-full"
-              disabled={form.formState.isSubmitting}
+              className={cn(
+                'group w-full transition-all',
+                stage === 'success' && 'bg-success hover:bg-success',
+              )}
+              disabled={form.formState.isSubmitting || stage === 'success'}
             >
-              {form.formState.isSubmitting ? (
+              {stage === 'submitting' ? (
                 <>
                   <Loader2 className="animate-spin" />
-                  Verificando...
+                  Entrando…
+                </>
+              ) : stage === 'success' ? (
+                <>
+                  <CheckCircle2 />
+                  ¡Listo!
                 </>
               ) : (
                 <>
@@ -361,6 +428,95 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------------
+// Mascota: frasco con burbuja de chat que cambia el mensaje segun stage.
+// -------------------------------------------------------------------
+
+interface MascotProps {
+  stage: Stage;
+  msg: { emoji: string; title: string; body: string };
+  variant?: 'dark' | 'light';
+}
+
+function MascotChatBubble({ stage, msg, variant = 'dark' }: MascotProps) {
+  const isLight = variant === 'light';
+  return (
+    <div className="flex items-start gap-3">
+      {/* Avatar mascota */}
+      <div
+        className={cn(
+          'grid size-12 shrink-0 place-items-center rounded-2xl shadow-sm transition-transform',
+          isLight
+            ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-100'
+            : 'bg-white/15 text-white ring-1 ring-white/20 backdrop-blur',
+          stage === 'success' && 'animate-mascot-pop',
+          stage === 'submitting' && 'animate-pulse',
+        )}
+        aria-hidden
+      >
+        {stage === 'submitting' ? (
+          <Loader2 className="size-6 animate-spin" />
+        ) : stage === 'success' ? (
+          <CheckCircle2 className="size-6 text-success" />
+        ) : (
+          <FlaskConical className="size-6" />
+        )}
+      </div>
+
+      {/* Bubble */}
+      <div
+        className={cn(
+          'relative max-w-xs flex-1 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm transition-all',
+          isLight
+            ? 'bg-white text-foreground ring-1 ring-border'
+            : 'bg-white/95 text-foreground ring-1 ring-white/30 backdrop-blur',
+        )}
+      >
+        {/* Triangulito izquierdo del bubble */}
+        <span
+          className={cn(
+            'absolute -left-1 top-3 size-2 rotate-45',
+            isLight ? 'bg-white ring-1 ring-border' : 'bg-white/95',
+          )}
+          aria-hidden
+        />
+        <div key={stage} className="space-y-0.5 animate-fade-in">
+          <p className="text-sm font-semibold">
+            {msg.title} <span className="ml-0.5">{msg.emoji}</span>
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">{msg.body}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------------
+// Decoraciones flotantes: iconos de lab suaves alrededor del panel.
+// -------------------------------------------------------------------
+function FloatingLabDecor() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <FlaskConical
+        className="absolute left-[8%] top-[28%] size-10 text-white/10 animate-float-slow"
+        style={{ animationDelay: '0s' }}
+      />
+      <TestTubes
+        className="absolute right-[12%] top-[18%] size-12 text-white/10 animate-float-slow"
+        style={{ animationDelay: '1.2s' }}
+      />
+      <Activity
+        className="absolute right-[20%] bottom-[28%] size-9 text-white/10 animate-float-slow"
+        style={{ animationDelay: '2.4s' }}
+      />
+      <FlaskConical
+        className="absolute left-[18%] bottom-[14%] size-8 text-white/10 animate-float-slow"
+        style={{ animationDelay: '3.2s' }}
+      />
     </div>
   );
 }

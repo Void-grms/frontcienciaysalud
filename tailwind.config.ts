@@ -91,10 +91,24 @@ const config: Config = {
           from: { transform: 'rotate(0deg)' },
           to: { transform: 'rotate(360deg)' },
         },
+        // Pop usado por la mascota cuando hay login exitoso (mini "bounce").
+        'mascot-pop': {
+          '0%': { transform: 'scale(1)' },
+          '40%': { transform: 'scale(1.15) rotate(-4deg)' },
+          '70%': { transform: 'scale(0.95) rotate(3deg)' },
+          '100%': { transform: 'scale(1) rotate(0)' },
+        },
+        // Flotacion lenta para decoraciones de fondo (frascos / ADN / etc.).
+        'float-slow': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 400ms ease-out both',
         'mesh-spin': 'mesh-spin 22s linear infinite',
+        'mascot-pop': 'mascot-pop 500ms ease-out',
+        'float-slow': 'float-slow 6s ease-in-out infinite',
       },
     },
   },
