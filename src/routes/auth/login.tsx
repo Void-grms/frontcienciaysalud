@@ -44,54 +44,64 @@ type Stage =
   | 'success'
   | 'error';
 
-const STAGE_MESSAGES: Record<Stage, { emoji: string; title: string; body: string }> = {
-  idle: {
-    emoji: '👋',
-    title: '¡Bienvenido!',
-    body: 'Ingresa tus credenciales para acceder al sistema del laboratorio.',
-  },
-  typing_email: {
-    emoji: '✏️',
-    title: 'Te escucho',
-    body: 'Sigue escribiendo tu email o número de documento.',
-  },
-  email_ok: {
-    emoji: '👏',
-    title: 'Vamos bien',
-    body: 'Solo falta tu contraseña para acceder al sistema.',
-  },
-  typing_password: {
-    emoji: '🔐',
-    title: 'Casi',
-    body: 'Tu contraseña debe tener al menos 6 caracteres.',
-  },
-  password_ok: {
-    emoji: '✨',
-    title: 'Todo listo',
-    body: 'Presiona "Entrar" para acceder al sistema.',
-  },
-  submitting: {
-    emoji: '🧪',
-    title: 'Casi listo',
-    body: 'Verificamos tus credenciales para darte acceso.',
-  },
-  success: {
-    emoji: '✅',
-    title: '¡Listo!',
-    body: 'Bienvenido de nuevo al sistema del laboratorio.',
-  },
-  error: {
-    emoji: '🤔',
-    title: 'Hmm…',
-    body: 'No pudimos validar esas credenciales. Inténtalo otra vez.',
-  },
-};
+interface StageMsg {
+  emoji: string;
+  title: string;
+  body: string;
+}
 
-function greetingForHour(hour: number): string {
-  if (hour < 6) return 'Buenas noches';
-  if (hour < 12) return 'Buenos dias';
-  if (hour < 19) return 'Buenas tardes';
-  return 'Buenas noches';
+function greetingForHour(hour: number): { label: string; emoji: string } {
+  if (hour < 6) return { label: 'Buenas noches', emoji: '🌙' };
+  if (hour < 12) return { label: 'Buenos días', emoji: '☀️' };
+  if (hour < 19) return { label: 'Buenas tardes', emoji: '👋' };
+  return { label: 'Buenas noches', emoji: '🌙' };
+}
+
+// El mensaje idle se construye dinamicamente con el saludo segun la hora
+// (Buenos dias / Buenas tardes / Buenas noches). El resto son fijos.
+function buildStageMessages(greeting: { label: string; emoji: string }): Record<Stage, StageMsg> {
+  return {
+    idle: {
+      emoji: greeting.emoji,
+      title: `${greeting.label}, ¡bienvenido!`,
+      body: 'Ingresa tus credenciales para acceder al sistema del laboratorio.',
+    },
+    typing_email: {
+      emoji: '✏️',
+      title: 'Te escucho',
+      body: 'Sigue escribiendo tu email o número de documento.',
+    },
+    email_ok: {
+      emoji: '👏',
+      title: 'Vamos bien',
+      body: 'Solo falta tu contraseña para acceder al sistema.',
+    },
+    typing_password: {
+      emoji: '🔐',
+      title: 'Casi',
+      body: 'Tu contraseña debe tener al menos 6 caracteres.',
+    },
+    password_ok: {
+      emoji: '✨',
+      title: 'Todo listo',
+      body: 'Presiona "Entrar" para acceder al sistema.',
+    },
+    submitting: {
+      emoji: '🧪',
+      title: 'Casi listo',
+      body: 'Verificamos tus credenciales para darte acceso.',
+    },
+    success: {
+      emoji: '✅',
+      title: '¡Listo!',
+      body: 'Bienvenido de nuevo al sistema del laboratorio.',
+    },
+    error: {
+      emoji: '🤔',
+      title: 'Hmm…',
+      body: 'No pudimos validar esas credenciales. Inténtalo otra vez.',
+    },
+  };
 }
 
 function isIdentifierValid(v: string): boolean {
@@ -141,6 +151,10 @@ export default function LoginPage() {
     return 'password_ok';
   })();
 
+  // Mensajes dependen del saludo, por eso se reconstruyen si la hora cambia.
+  const stageMessages = useMemo(() => buildStageMessages(greeting), [greeting]);
+  const msg = stageMessages[stage];
+
   // Refresca el saludo si el usuario abre la pestana en otro horario.
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -181,8 +195,6 @@ export default function LoginPage() {
     setCapsLockOn(e.getModifierState('CapsLock'));
   };
 
-  const msg = STAGE_MESSAGES[stage];
-
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[1fr_minmax(420px,_520px)]">
       {/* Panel izquierdo: ilustracion del cientifico + chat bubble reactiva.
@@ -219,10 +231,12 @@ export default function LoginPage() {
           </span>
         </div>
 
-        {/* Chat bubble flotante — posicionada arriba a la derecha encima de la
-            cabeza del cientifico para sentir que "habla" desde su lugar. */}
+        {/* Chat bubble flotante: posicionada arriba-cerca del cientifico
+            (su cabeza esta aprox. al 45% horizontal, 35% vertical del panel).
+            El bubble vive a su izquierda con el triangulito apuntando hacia
+            la cabeza (derecha-abajo), simulando que el cientifico "habla". */}
         <div
-          className="absolute left-6 right-6 top-24 z-10 flex justify-start animate-fade-in xl:left-12 xl:top-28"
+          className="absolute left-[6%] top-[14%] z-10 max-w-[44%] animate-fade-in xl:top-[12%]"
           style={{ animationDelay: '200ms' }}
         >
           <MascotChatBubble stage={stage} msg={msg} variant="floating" />
@@ -230,13 +244,13 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div
-          className="relative z-10 flex items-center justify-between p-8 text-xs text-primary-700/70 animate-fade-in"
+          className="relative z-10 mt-auto flex items-center justify-between p-8 text-xs text-primary-700/80 animate-fade-in"
           style={{ animationDelay: '300ms' }}
         >
-          <span className="rounded-md bg-white/70 px-2 py-1 backdrop-blur">
-            © {new Date().getFullYear()} Lab Clínico — {greeting}
+          <span className="rounded-md bg-white/80 px-2 py-1 shadow-sm backdrop-blur">
+            © {new Date().getFullYear()} Lab Clínico — {greeting.label}
           </span>
-          <span className="flex items-center gap-1.5 rounded-md bg-white/70 px-2 py-1 backdrop-blur">
+          <span className="flex items-center gap-1.5 rounded-md bg-white/80 px-2 py-1 shadow-sm backdrop-blur">
             <span className="size-1.5 rounded-full bg-success animate-pulse" />
             Sistema operativo
           </span>
@@ -439,54 +453,87 @@ interface MascotProps {
   stage: Stage;
   msg: { emoji: string; title: string; body: string };
   // - `floating`: encima de la imagen del cientifico (fondo opaco + sombra fuerte)
-  // - `light`: mobile, sin imagen detras
+  //   con triangulito apuntando hacia abajo-derecha (donde esta su cabeza)
+  // - `light`: mobile, sin imagen detras, triangulito a la izquierda como bubble clasica
   variant?: 'floating' | 'light';
 }
 
 function MascotChatBubble({ stage, msg, variant = 'floating' }: MascotProps) {
-  return (
-    <div className="flex max-w-sm items-start gap-3">
-      {/* Avatar mascota: frasco/Activity */}
-      <div
-        className={cn(
-          'grid size-11 shrink-0 place-items-center rounded-2xl shadow-md transition-transform',
-          'bg-white text-primary-700 ring-1 ring-primary-100',
-          stage === 'success' && 'animate-mascot-pop',
-          stage === 'submitting' && 'animate-pulse',
-        )}
-        aria-hidden
-      >
-        {stage === 'submitting' ? (
-          <Loader2 className="size-5 animate-spin" />
-        ) : stage === 'success' ? (
-          <CheckCircle2 className="size-5 text-success" />
-        ) : (
-          <FlaskConical className="size-5" />
-        )}
-      </div>
+  // En la variante `floating`, el icono que indica el estado vive DENTRO del
+  // bubble (esquina superior izquierda) para no romper la lectura del bubble
+  // como "globo de dialogo del cientifico". En `light` (mobile) usamos avatar
+  // a la izquierda para reforzar la idea de mascota.
+  const StageIcon = stage === 'submitting' ? Loader2 : stage === 'success' ? CheckCircle2 : FlaskConical;
 
-      {/* Bubble */}
-      <div
-        className={cn(
-          'relative flex-1 rounded-2xl rounded-tl-sm px-4 py-3 transition-all',
-          variant === 'floating'
-            ? 'bg-white/95 text-foreground shadow-lg ring-1 ring-border/60 backdrop-blur'
-            : 'bg-white text-foreground shadow-sm ring-1 ring-border',
-        )}
-      >
-        {/* Triangulito izquierdo del bubble */}
-        <span
+  if (variant === 'light') {
+    return (
+      <div className="flex max-w-sm items-start gap-3">
+        <div
           className={cn(
-            'absolute -left-1 top-3 size-2 rotate-45',
-            variant === 'floating' ? 'bg-white/95' : 'bg-white ring-1 ring-border',
+            'grid size-11 shrink-0 place-items-center rounded-2xl shadow-md',
+            'bg-primary-50 text-primary-700 ring-1 ring-primary-100',
+            stage === 'success' && 'animate-mascot-pop',
+            stage === 'submitting' && 'animate-pulse',
           )}
           aria-hidden
-        />
-        <div key={stage} className="space-y-0.5 animate-fade-in">
-          <p className="text-sm font-semibold">
+        >
+          <StageIcon
+            className={cn(
+              'size-5',
+              stage === 'submitting' && 'animate-spin',
+              stage === 'success' && 'text-success',
+            )}
+          />
+        </div>
+        <div className="relative flex-1 rounded-2xl rounded-tl-sm bg-white px-4 py-3 shadow-sm ring-1 ring-border">
+          <span className="absolute -left-1 top-3 size-2 rotate-45 bg-white ring-1 ring-border" aria-hidden />
+          <div key={stage} className="space-y-0.5 animate-fade-in">
+            <p className="text-sm font-semibold">
+              {msg.title} <span className="ml-0.5">{msg.emoji}</span>
+            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">{msg.body}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Floating: globo de dialogo que "sale" del cientifico (triangulito en la
+  // esquina inferior-derecha apuntando hacia donde esta su cabeza).
+  return (
+    <div
+      className={cn(
+        'relative rounded-2xl rounded-br-sm bg-white/95 px-4 py-3 shadow-lg ring-1 ring-border/60 backdrop-blur transition-all',
+        stage === 'success' && 'animate-mascot-pop',
+      )}
+    >
+      {/* Triangulito inferior-derecho, apuntando hacia abajo-derecha (hacia
+          la cabeza del cientifico). */}
+      <span
+        className="absolute -bottom-1 right-6 size-2 rotate-45 bg-white/95"
+        aria-hidden
+      />
+      <div key={stage} className="flex items-start gap-2.5 animate-fade-in">
+        <span
+          className={cn(
+            'mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-primary-50 text-primary-700 ring-1 ring-primary-100',
+            stage === 'submitting' && 'animate-pulse',
+          )}
+          aria-hidden
+        >
+          <StageIcon
+            className={cn(
+              'size-3.5',
+              stage === 'submitting' && 'animate-spin',
+              stage === 'success' && 'text-success',
+            )}
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground">
             {msg.title} <span className="ml-0.5">{msg.emoji}</span>
           </p>
-          <p className="text-xs leading-relaxed text-muted-foreground">{msg.body}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{msg.body}</p>
         </div>
       </div>
     </div>
