@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  Activity,
   AlertCircle,
   ArrowRight,
   CheckCircle2,
@@ -15,7 +14,6 @@ import {
   KeyRound,
   Loader2,
   Lock,
-  TestTubes,
   User,
 } from 'lucide-react';
 
@@ -25,6 +23,8 @@ import { Label } from '@shared/components/ui/label';
 import { ApiError } from '@shared/api/error-mapper';
 import { defaultPathForRole, useAuth } from '@shared/auth/useAuth';
 import { cn } from '@shared/lib/cn';
+
+import loginScientistImg from '@/assets/login-scientist.png';
 
 const schema = z.object({
   identifier: z.string().min(3, 'Ingresa tu email o documento').max(180),
@@ -185,59 +185,58 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[1fr_minmax(420px,_520px)]">
-      {/* Panel izquierdo: escena de laboratorio + mascota reactiva. Solo desktop. */}
-      <div className="relative hidden overflow-hidden bg-primary-700 text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12">
-        {/* Mesh gradient animado de fondo. */}
-        <div className="absolute inset-0" aria-hidden>
-          <div
-            className="absolute -left-1/4 -top-1/4 size-[120%] animate-mesh-spin opacity-50 blur-3xl"
-            style={{
-              background:
-                'conic-gradient(from 0deg at 50% 50%, hsl(173 90% 50% / 0.5), hsl(180 85% 40% / 0.4), hsl(165 80% 35% / 0.5), hsl(190 90% 45% / 0.4), hsl(173 90% 50% / 0.5))',
-            }}
-          />
-        </div>
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.06] mask-radial-fade" aria-hidden />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary-700 to-transparent" aria-hidden />
-
-        {/* Decoraciones flotantes — frascos / ADN sutiles. */}
-        <FloatingLabDecor />
-
-        {/* Logo */}
+      {/* Panel izquierdo: ilustracion del cientifico + chat bubble reactiva.
+          La imagen es el hero, la bubble flota encima sobre el lado superior. */}
+      <div className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between">
+        {/* Imagen de fondo cubriendo todo el panel. */}
+        <img
+          src={loginScientistImg}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
+          aria-hidden
+        />
+        {/* Velo translucido en la parte superior para que el logo se lea claro
+            y un degrade muy suave en la parte inferior para el footer. */}
         <div
-          className="relative z-10 flex items-center gap-2.5 animate-fade-in"
+          className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/40 to-transparent"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/40 to-transparent"
+          aria-hidden
+        />
+
+        {/* Logo arriba a la izquierda */}
+        <div
+          className="relative z-10 flex items-center gap-2.5 p-8 animate-fade-in"
           style={{ animationDelay: '50ms' }}
         >
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15 backdrop-blur ring-1 ring-white/20">
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/90 text-primary-700 shadow-sm ring-1 ring-primary-100 backdrop-blur">
             <FlaskConical className="size-5" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Lab Clinico</span>
+          <span className="text-lg font-semibold tracking-tight text-primary-700 drop-shadow-sm">
+            Lab Clínico
+          </span>
         </div>
 
-        {/* Centro: saludo grande + mascota con chat bubble reactiva */}
+        {/* Chat bubble flotante — posicionada arriba a la derecha encima de la
+            cabeza del cientifico para sentir que "habla" desde su lugar. */}
         <div
-          className="relative z-10 max-w-md space-y-7 animate-fade-in"
-          style={{ animationDelay: '150ms' }}
+          className="absolute left-6 right-6 top-24 z-10 flex justify-start animate-fade-in xl:left-12 xl:top-28"
+          style={{ animationDelay: '200ms' }}
         >
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-primary-foreground/70">{greeting}.</p>
-            <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-              El laboratorio clínico,{' '}
-              <span className="text-primary-foreground/80">en tus manos.</span>
-            </h1>
-          </div>
-
-          {/* Mascota + chat bubble — se anima cuando cambia el stage */}
-          <MascotChatBubble stage={stage} msg={msg} />
+          <MascotChatBubble stage={stage} msg={msg} variant="floating" />
         </div>
 
         {/* Footer */}
         <div
-          className="relative z-10 flex items-center justify-between text-xs text-primary-foreground/60 animate-fade-in"
+          className="relative z-10 flex items-center justify-between p-8 text-xs text-primary-700/70 animate-fade-in"
           style={{ animationDelay: '300ms' }}
         >
-          <span>© {new Date().getFullYear()} Lab Clinico</span>
-          <span className="flex items-center gap-1.5">
+          <span className="rounded-md bg-white/70 px-2 py-1 backdrop-blur">
+            © {new Date().getFullYear()} Lab Clínico — {greeting}
+          </span>
+          <span className="flex items-center gap-1.5 rounded-md bg-white/70 px-2 py-1 backdrop-blur">
             <span className="size-1.5 rounded-full bg-success animate-pulse" />
             Sistema operativo
           </span>
@@ -439,48 +438,47 @@ export default function LoginPage() {
 interface MascotProps {
   stage: Stage;
   msg: { emoji: string; title: string; body: string };
-  variant?: 'dark' | 'light';
+  // - `floating`: encima de la imagen del cientifico (fondo opaco + sombra fuerte)
+  // - `light`: mobile, sin imagen detras
+  variant?: 'floating' | 'light';
 }
 
-function MascotChatBubble({ stage, msg, variant = 'dark' }: MascotProps) {
-  const isLight = variant === 'light';
+function MascotChatBubble({ stage, msg, variant = 'floating' }: MascotProps) {
   return (
-    <div className="flex items-start gap-3">
-      {/* Avatar mascota */}
+    <div className="flex max-w-sm items-start gap-3">
+      {/* Avatar mascota: frasco/Activity */}
       <div
         className={cn(
-          'grid size-12 shrink-0 place-items-center rounded-2xl shadow-sm transition-transform',
-          isLight
-            ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-100'
-            : 'bg-white/15 text-white ring-1 ring-white/20 backdrop-blur',
+          'grid size-11 shrink-0 place-items-center rounded-2xl shadow-md transition-transform',
+          'bg-white text-primary-700 ring-1 ring-primary-100',
           stage === 'success' && 'animate-mascot-pop',
           stage === 'submitting' && 'animate-pulse',
         )}
         aria-hidden
       >
         {stage === 'submitting' ? (
-          <Loader2 className="size-6 animate-spin" />
+          <Loader2 className="size-5 animate-spin" />
         ) : stage === 'success' ? (
-          <CheckCircle2 className="size-6 text-success" />
+          <CheckCircle2 className="size-5 text-success" />
         ) : (
-          <FlaskConical className="size-6" />
+          <FlaskConical className="size-5" />
         )}
       </div>
 
       {/* Bubble */}
       <div
         className={cn(
-          'relative max-w-xs flex-1 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm transition-all',
-          isLight
-            ? 'bg-white text-foreground ring-1 ring-border'
-            : 'bg-white/95 text-foreground ring-1 ring-white/30 backdrop-blur',
+          'relative flex-1 rounded-2xl rounded-tl-sm px-4 py-3 transition-all',
+          variant === 'floating'
+            ? 'bg-white/95 text-foreground shadow-lg ring-1 ring-border/60 backdrop-blur'
+            : 'bg-white text-foreground shadow-sm ring-1 ring-border',
         )}
       >
         {/* Triangulito izquierdo del bubble */}
         <span
           className={cn(
             'absolute -left-1 top-3 size-2 rotate-45',
-            isLight ? 'bg-white ring-1 ring-border' : 'bg-white/95',
+            variant === 'floating' ? 'bg-white/95' : 'bg-white ring-1 ring-border',
           )}
           aria-hidden
         />
@@ -491,32 +489,6 @@ function MascotChatBubble({ stage, msg, variant = 'dark' }: MascotProps) {
           <p className="text-xs leading-relaxed text-muted-foreground">{msg.body}</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-// -------------------------------------------------------------------
-// Decoraciones flotantes: iconos de lab suaves alrededor del panel.
-// -------------------------------------------------------------------
-function FloatingLabDecor() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      <FlaskConical
-        className="absolute left-[8%] top-[28%] size-10 text-white/10 animate-float-slow"
-        style={{ animationDelay: '0s' }}
-      />
-      <TestTubes
-        className="absolute right-[12%] top-[18%] size-12 text-white/10 animate-float-slow"
-        style={{ animationDelay: '1.2s' }}
-      />
-      <Activity
-        className="absolute right-[20%] bottom-[28%] size-9 text-white/10 animate-float-slow"
-        style={{ animationDelay: '2.4s' }}
-      />
-      <FlaskConical
-        className="absolute left-[18%] bottom-[14%] size-8 text-white/10 animate-float-slow"
-        style={{ animationDelay: '3.2s' }}
-      />
     </div>
   );
 }
