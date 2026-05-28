@@ -97,10 +97,12 @@ export default function AdminLayout() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar fijo desktop */}
-      <aside className="hidden w-64 shrink-0 border-r border-border bg-card lg:flex lg:flex-col">
+      {/* Sidebar fijo desktop. Es STICKY a la altura del viewport para que el
+          SidebarUserCard (logout) quede siempre visible aunque el main tenga
+          mucho scroll. `self-start` evita que flex lo estire al alto del main. */}
+      <aside className="hidden w-64 shrink-0 self-start lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col border-r border-border bg-card">
         <SidebarHeader />
-        <nav className="flex flex-1 flex-col gap-5 overflow-y-auto p-3">
+        <nav className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-3 pt-4">
           <NavSection items={NAV_PRIMARY} />
           <NavSection title="Configuracion" items={NAV_SECONDARY} />
         </nav>
@@ -122,7 +124,7 @@ export default function AdminLayout() {
           />
           <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card animate-fade-in">
             <SidebarHeader onClose={() => setMobileOpen(false)} />
-            <nav className="flex flex-1 flex-col gap-5 overflow-y-auto p-3">
+            <nav className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-3 pt-4">
               <NavSection items={NAV_PRIMARY} onNavigate={() => setMobileOpen(false)} />
               <NavSection
                 title="Configuracion"
@@ -167,10 +169,12 @@ export default function AdminLayout() {
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto bg-background">
+        <main className="flex-1 bg-background">
           {/* Padding superior generoso para que el primer card no quede pegado
-              al sticky header (h-14). py-8/py-10 da ~32-40px de aire. */}
-          <div className="container py-8 lg:py-10">
+              al sticky header (h-14). El scroll ahora ocurre en el body, no
+              dentro del main — esto evita doble scroll cuando hay sidebar
+              sticky. py-10/py-12 da ~40-48px de aire del header al contenido. */}
+          <div className="container py-10 lg:py-12">
             <Outlet />
           </div>
         </main>
