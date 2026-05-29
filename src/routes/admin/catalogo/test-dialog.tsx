@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Info, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -341,29 +341,41 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
           )}
 
           {resultType === 'numeric' && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="minCritical">Minimo critico</Label>
-                <Input
-                  id="minCritical"
-                  type="number"
-                  step="any"
-                  {...form.register('minCritical')}
-                />
+            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+              <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <p>
+                  Umbrales de <strong>alarma</strong>. Solo disparan el ícono{' '}
+                  <span className="font-mono">↑/↓</span> al lado del resultado cuando está fuera de
+                  rango. <strong>NO</strong> son los valores que se imprimen en la columna
+                  &quot;Valores referenciales&quot; del PDF — ésos se editan en la pestaña{' '}
+                  <strong>Rangos referenciales</strong>.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxCritical">Maximo critico</Label>
-                <Input
-                  id="maxCritical"
-                  type="number"
-                  step="any"
-                  {...form.register('maxCritical')}
-                />
-                {form.formState.errors.maxCritical && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.maxCritical.message}
-                  </p>
-                )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="minCritical">Umbral crítico inferior (↓)</Label>
+                  <Input
+                    id="minCritical"
+                    type="number"
+                    step="any"
+                    {...form.register('minCritical')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxCritical">Umbral crítico superior (↑)</Label>
+                  <Input
+                    id="maxCritical"
+                    type="number"
+                    step="any"
+                    {...form.register('maxCritical')}
+                  />
+                  {form.formState.errors.maxCritical && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.maxCritical.message}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -413,13 +425,17 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="referenceText">Texto de referencia (opcional)</Label>
+            <Label htmlFor="referenceText">Notas internas (no aparecen en el PDF)</Label>
             <Textarea
               id="referenceText"
               rows={2}
-              placeholder="Texto que aparece en el informe cuando no hay rangos numericos."
+              placeholder="Notas de uso interno del laboratorio (metodología, observaciones, etc.)"
               {...form.register('referenceText')}
             />
+            <p className="text-[11px] text-muted-foreground">
+              Para configurar lo que se imprime en la columna &quot;Valores referenciales&quot; usa
+              la pestaña <strong>Rangos referenciales</strong>.
+            </p>
           </div>
 
               </DialogBody>
