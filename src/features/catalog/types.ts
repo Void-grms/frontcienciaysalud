@@ -104,6 +104,43 @@ export type TestUpdateInput = Partial<Omit<TestCreateInput, 'code'>> & {
   status?: CatalogStatus;
 };
 
+// ----- Rangos referenciales -----
+
+export type Sex = 'M' | 'F' | 'A';
+export type PhysiologicalState = 'none' | 'pregnancy' | 'lactation';
+
+export interface ReferenceRange {
+  id: string;
+  testId: string;
+  sex: Sex;
+  ageMinDays: number | null;
+  ageMaxDays: number | null;
+  physiologicalState: PhysiologicalState | null;
+  valueMin: string | number | null;
+  valueMax: string | number | null;
+  qualitativeExpected: string | null;
+  displayText: string | null;
+  priority: number;
+  version: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReferenceRangeInput {
+  sex?: Sex;
+  ageMinDays?: number;
+  ageMaxDays?: number;
+  physiologicalState?: PhysiologicalState;
+  valueMin?: number;
+  valueMax?: number;
+  qualitativeExpected?: string;
+  displayText?: string;
+  priority?: number;
+  effectiveFrom?: string;
+}
+
 // ----- Paneles -----
 
 export interface PanelTestEntry {

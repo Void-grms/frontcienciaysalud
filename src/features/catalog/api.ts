@@ -14,6 +14,8 @@ import type {
   PanelTestEntry,
   PanelTestInput,
   PanelUpdateInput,
+  ReferenceRange,
+  ReferenceRangeInput,
   Test,
   TestCreateInput,
   TestListParams,
@@ -69,6 +71,26 @@ export const catalogApi = {
 
   async deleteTest(id: string): Promise<void> {
     await api.delete(`/catalog/tests/${id}`);
+  },
+
+  // -------- Rangos referenciales --------
+  async listTestRanges(testId: string): Promise<ReferenceRange[]> {
+    const { data } = await api.get<ReferenceRange[]>(`/catalog/tests/${testId}/ranges`);
+    return data;
+  },
+
+  async createTestRange(testId: string, input: ReferenceRangeInput): Promise<ReferenceRange> {
+    const { data } = await api.post<ReferenceRange>(`/catalog/tests/${testId}/ranges`, input);
+    return data;
+  },
+
+  async updateTestRange(id: string, input: ReferenceRangeInput): Promise<ReferenceRange> {
+    const { data } = await api.patch<ReferenceRange>(`/catalog/ranges/${id}`, input);
+    return data;
+  },
+
+  async deleteTestRange(id: string): Promise<void> {
+    await api.delete(`/catalog/ranges/${id}`);
   },
 
   // -------- Paneles --------

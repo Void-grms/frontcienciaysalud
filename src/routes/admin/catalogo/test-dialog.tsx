@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
@@ -23,8 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@shared/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 import { Textarea } from '@shared/components/ui/textarea';
 import { reportFormError } from '@shared/lib/report-error';
+
+import { TestRangesTab } from './test-ranges-tab';
 
 import {
   useCategoriesList,
@@ -143,10 +146,14 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
   });
 
   const optionsField = useFieldArray({ control: form.control, name: 'options' });
+  const [tab, setTab] = useState<'data' | 'ranges'>('data');
 
   useEffect(() => {
     if (open) {
       form.reset(test ? fromTest(test) : emptyForm());
+      // Al abrir siempre volvemos a la pestaña Datos para no confundir al usuario
+      // si previamente cerró el modal en otra pestaña.
+      setTab('data');
     }
   }, [open, test, form]);
 
@@ -207,7 +214,16 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'data' | 'ranges')}>
+          <TabsList>
+            <TabsTrigger value="data">Datos</TabsTrigger>
+            <TabsTrigger value="ranges" disabled={!isEditing}>
+              Rangos referenciales
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="data">
+            <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="code">Codigo *</Label>
@@ -413,7 +429,19 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
               {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear prueba'}
             </Button>
           </DialogFooter>
-        </form>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="ranges">
+            {isEditing && test ? (
+              <TestRangesTab
+                testId={test.id}
+                resultType={test.resultType}
+                unit={test.unit}
+              />
+            ) : null}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

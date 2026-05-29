@@ -8,6 +8,7 @@ import type {
   PanelListParams,
   PanelTestInput,
   PanelUpdateInput,
+  ReferenceRangeInput,
   TestCreateInput,
   TestListParams,
   TestUpdateInput,
@@ -30,6 +31,10 @@ export const catalogKeys = {
     all: ['catalog', 'panels'] as const,
     list: (params: PanelListParams) => ['catalog', 'panels', 'list', params] as const,
     detail: (id: string) => ['catalog', 'panels', 'detail', id] as const,
+  },
+  ranges: {
+    all: ['catalog', 'ranges'] as const,
+    forTest: (testId: string) => ['catalog', 'ranges', 'test', testId] as const,
   },
 };
 
@@ -118,6 +123,47 @@ export function useDeleteTest() {
     mutationFn: (id: string) => catalogApi.deleteTest(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: catalogKeys.tests.all });
+    },
+  });
+}
+
+// ---------- Rangos referenciales ----------
+
+export function useTestRanges(testId: string | null) {
+  return useQuery({
+    queryKey: catalogKeys.ranges.forTest(testId ?? ''),
+    queryFn: () => catalogApi.listTestRanges(testId as string),
+    enabled: Boolean(testId),
+  });
+}
+
+export function useCreateTestRange(testId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ReferenceRangeInput) => catalogApi.createTestRange(testId, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: catalogKeys.ranges.forTest(testId) });
+    },
+  });
+}
+
+export function useUpdateTestRange(testId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ReferenceRangeInput }) =>
+      catalogApi.updateTestRange(id, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: catalogKeys.ranges.forTest(testId) });
+    },
+  });
+}
+
+export function useDeleteTestRange(testId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => catalogApi.deleteTestRange(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: catalogKeys.ranges.forTest(testId) });
     },
   });
 }
