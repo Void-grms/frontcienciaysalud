@@ -9,6 +9,7 @@ import { Badge } from '@shared/components/ui/badge';
 import { Button } from '@shared/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -124,15 +125,15 @@ export function ReferenceUsersDialog({ referenceId, onOpenChange }: ReferenceUse
         if (!next) onOpenChange(false);
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Usuarios de la referencia</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="truncate">
             {detail.data ? detail.data.name : 'Cargando...'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <DialogBody className="space-y-5">
           {/* Lista existente */}
           <section>
             <h3 className="mb-2 text-sm font-medium">Usuarios actuales</h3>
@@ -188,7 +189,7 @@ export function ReferenceUsersDialog({ referenceId, onOpenChange }: ReferenceUse
           <section className="rounded-md border bg-muted/30 p-4">
             <h3 className="mb-3 text-sm font-medium">Agregar nuevo usuario</h3>
             <form onSubmit={onSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="userEmail">Email *</Label>
                   <Input
@@ -265,7 +266,7 @@ export function ReferenceUsersDialog({ referenceId, onOpenChange }: ReferenceUse
               </div>
             </section>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>Cerrar</Button>

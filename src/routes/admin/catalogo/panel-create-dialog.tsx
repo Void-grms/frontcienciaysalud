@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Button } from '@shared/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -102,8 +103,9 @@ export function PanelCreateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={onSubmit} className="flex flex-1 min-h-0 flex-col">
+          <DialogBody className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="code">Codigo *</Label>
               <Input
@@ -136,6 +138,7 @@ export function PanelCreateDialog({
             <Textarea id="description" rows={3} {...form.register('description')} />
           </div>
 
+          </DialogBody>
           <DialogFooter>
             <Button
               type="button"

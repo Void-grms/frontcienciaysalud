@@ -429,7 +429,7 @@ export function TestRangesTab({ testId, resultType, unit }: TestRangesTabProps) 
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-2">
               <Label>Unidad de edad</Label>
               <Select
@@ -480,7 +480,7 @@ export function TestRangesTab({ testId, resultType, unit }: TestRangesTabProps) 
           </div>
 
           {resultType === 'numeric' && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="range-value-min">
                   Mínimo normal {unit ? `(${unit})` : ''}

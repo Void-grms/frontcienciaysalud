@@ -10,6 +10,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -167,7 +168,7 @@ export function PatientDialog({ open, onOpenChange, patient }: PatientDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
             <div
@@ -187,7 +188,8 @@ export function PatientDialog({ open, onOpenChange, patient }: PatientDialogProp
           </div>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-5">
+        <form onSubmit={onSubmit} className="flex flex-1 min-h-0 flex-col">
+          <DialogBody className="space-y-5">
           {/* Seccion: Identidad */}
           <section className="space-y-3">
             <SectionHeader>
@@ -364,6 +366,7 @@ export function PatientDialog({ open, onOpenChange, patient }: PatientDialogProp
             </div>
           </section>
 
+          </DialogBody>
           <DialogFooter>
             <Button
               type="button"

@@ -3,6 +3,7 @@ import { FileSearch } from 'lucide-react';
 import { Badge } from '@shared/components/ui/badge';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -20,7 +21,7 @@ interface AuditDetailDialogProps {
 export function AuditDetailDialog({ entry, onClose }: AuditDetailDialogProps) {
   return (
     <Dialog open={entry !== null} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <div className="flex items-start gap-2.5">
             <div
@@ -42,7 +43,7 @@ export function AuditDetailDialog({ entry, onClose }: AuditDetailDialogProps) {
         </DialogHeader>
 
         {entry && (
-          <div className="space-y-5">
+          <DialogBody className="space-y-5">
             {entry.summary && (
               <Section title="Resumen">
                 <p className="text-sm leading-relaxed">{entry.summary}</p>
@@ -75,7 +76,7 @@ export function AuditDetailDialog({ entry, onClose }: AuditDetailDialogProps) {
                 <p className="text-xs text-muted-foreground">Sin metadata adicional.</p>
               )}
             </Section>
-          </div>
+          </DialogBody>
         )}
       </DialogContent>
     </Dialog>

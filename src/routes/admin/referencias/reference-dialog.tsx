@@ -8,6 +8,7 @@ import { AlertCircle, Building2, Loader2, Mail, Phone } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -136,7 +137,7 @@ export function ReferenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
             <div
@@ -155,7 +156,8 @@ export function ReferenceDialog({
           </div>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-5">
+        <form onSubmit={onSubmit} className="flex flex-1 min-h-0 flex-col">
+          <DialogBody className="space-y-5">
           <section className="space-y-3">
             <SectionHeader>Identidad</SectionHeader>
             <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
@@ -262,6 +264,7 @@ export function ReferenceDialog({
             </div>
           </section>
 
+          </DialogBody>
           <DialogFooter>
             <Button
               type="button"

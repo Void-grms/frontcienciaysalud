@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { Button } from '@shared/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -205,7 +206,7 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar prueba' : 'Nueva prueba'}</DialogTitle>
           <DialogDescription>
@@ -214,17 +215,22 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as 'data' | 'ranges')}>
-          <TabsList>
+        <Tabs
+          value={tab}
+          onValueChange={(v) => setTab(v as 'data' | 'ranges')}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <TabsList className="self-start">
             <TabsTrigger value="data">Datos</TabsTrigger>
             <TabsTrigger value="ranges" disabled={!isEditing}>
               Rangos referenciales
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="data">
-            <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <TabsContent value="data" className="flex min-h-0 flex-1 flex-col">
+            <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+              <DialogBody className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="code">Codigo *</Label>
               <Input
@@ -262,7 +268,7 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Categoria *</Label>
               <Select
@@ -308,7 +314,7 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
           </div>
 
           {resultType === 'numeric' && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="unit">Unidad</Label>
                 <Input id="unit" placeholder="mg/dL" {...form.register('unit')} />
@@ -335,7 +341,7 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
           )}
 
           {resultType === 'numeric' && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="minCritical">Minimo critico</Label>
                 <Input
@@ -416,29 +422,35 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={submitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear prueba'}
-            </Button>
-          </DialogFooter>
+              </DialogBody>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={submitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear prueba'}
+                </Button>
+              </DialogFooter>
             </form>
           </TabsContent>
 
-          <TabsContent value="ranges">
+          <TabsContent
+            value="ranges"
+            className="flex min-h-0 flex-1 flex-col"
+          >
             {isEditing && test ? (
-              <TestRangesTab
-                testId={test.id}
-                resultType={test.resultType}
-                unit={test.unit}
-              />
+              <DialogBody>
+                <TestRangesTab
+                  testId={test.id}
+                  resultType={test.resultType}
+                  unit={test.unit}
+                />
+              </DialogBody>
             ) : null}
           </TabsContent>
         </Tabs>

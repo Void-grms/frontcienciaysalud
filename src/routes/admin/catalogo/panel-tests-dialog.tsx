@@ -6,6 +6,7 @@ import { Badge } from '@shared/components/ui/badge';
 import { Button } from '@shared/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -80,17 +81,17 @@ export function PanelTestsDialog({ panelId, onOpenChange }: PanelTestsDialogProp
         if (!next) onOpenChange(false);
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Pruebas del panel</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="truncate">
             {panelQuery.data
               ? `${panelQuery.data.code} — ${panelQuery.data.name}`
               : 'Cargando...'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody className="space-y-4">
           <section>
             <h3 className="mb-2 text-sm font-medium">Asignadas</h3>
             {panelQuery.isLoading && (
@@ -107,15 +108,18 @@ export function PanelTestsDialog({ panelId, onOpenChange }: PanelTestsDialogProp
                   key={pt.id}
                   className="flex items-center gap-3 rounded-md border bg-card px-3 py-2"
                 >
-                  <span className="font-mono text-xs text-muted-foreground">{pt.test.code}</span>
-                  <span className="flex-1 truncate text-sm">{pt.test.name}</span>
-                  <Badge variant="outline" className="hidden sm:inline-flex">
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                    {pt.test.code}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{pt.test.name}</span>
+                  <Badge variant="outline" className="hidden shrink-0 sm:inline-flex">
                     {pt.test.resultType}
                     {pt.test.unit ? ` · ${pt.test.unit}` : ''}
                   </Badge>
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="shrink-0"
                     onClick={() => void handleRemove(pt.testId, pt.test.name)}
                     disabled={removeMut.isPending}
                     aria-label={`Quitar ${pt.test.name}`}
@@ -138,7 +142,7 @@ export function PanelTestsDialog({ panelId, onOpenChange }: PanelTestsDialogProp
                 className="pl-8"
               />
             </div>
-            <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto rounded-md border">
+            <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto overflow-x-hidden rounded-md border">
               {testsQuery.isLoading && (
                 <li className="px-3 py-2 text-sm text-muted-foreground">Cargando...</li>
               )}
@@ -154,14 +158,17 @@ export function PanelTestsDialog({ panelId, onOpenChange }: PanelTestsDialogProp
                     key={t.id}
                     className="flex items-center gap-3 border-b px-3 py-2 last:border-b-0"
                   >
-                    <span className="font-mono text-xs text-muted-foreground">{t.code}</span>
-                    <span className="flex-1 truncate text-sm">{t.name}</span>
-                    <span className="hidden text-xs text-muted-foreground sm:inline">
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      {t.code}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm">{t.name}</span>
+                    <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
                       {t.category?.name}
                     </span>
                     <Button
                       size="sm"
                       variant={already ? 'outline' : 'default'}
+                      className="shrink-0"
                       disabled={already || addMut.isPending}
                       onClick={() => void handleAdd(t.id)}
                     >
@@ -173,7 +180,7 @@ export function PanelTestsDialog({ panelId, onOpenChange }: PanelTestsDialogProp
               })}
             </ul>
           </section>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>Cerrar</Button>

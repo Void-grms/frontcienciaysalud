@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@shared/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -70,19 +71,21 @@ export function AddItemsDialog({ orderId, open, onOpenChange }: AddItemsDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Agregar pruebas a la orden</DialogTitle>
           <DialogDescription>
             Las pruebas que ya esten en la orden seran ignoradas por el backend.
           </DialogDescription>
         </DialogHeader>
-        <TestsPicker
-          selectedTests={tests}
-          selectedPanels={panels}
-          onChangeTests={setTests}
-          onChangePanels={setPanels}
-        />
+        <DialogBody>
+          <TestsPicker
+            selectedTests={tests}
+            selectedPanels={panels}
+            onChangeTests={setTests}
+            onChangePanels={setPanels}
+          />
+        </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={addMut.isPending}>
             Cancelar
