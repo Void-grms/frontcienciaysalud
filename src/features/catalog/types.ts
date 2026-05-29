@@ -118,6 +118,10 @@ export interface ReferenceRange {
   physiologicalState: PhysiologicalState | null;
   valueMin: string | number | null;
   valueMax: string | number | null;
+  // Umbrales de panico — disparan flag critical_low/high. Pueden quedar en
+  // null si el rango solo deberia generar low/high (no critico).
+  criticalMin: string | number | null;
+  criticalMax: string | number | null;
   qualitativeExpected: string | null;
   displayText: string | null;
   priority: number;
@@ -135,6 +139,8 @@ export interface ReferenceRangeInput {
   physiologicalState?: PhysiologicalState;
   valueMin?: number;
   valueMax?: number;
+  criticalMin?: number;
+  criticalMax?: number;
   qualitativeExpected?: string;
   displayText?: string;
   priority?: number;

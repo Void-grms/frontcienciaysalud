@@ -63,8 +63,6 @@ const schema = z
     unit: z.string().max(40).optional().or(z.literal('')),
     method: z.string().max(120).optional().or(z.literal('')),
     decimals: z.coerce.number().int().min(0).max(6).optional(),
-    minCritical: z.union([z.coerce.number(), z.literal('')]).optional(),
-    maxCritical: z.union([z.coerce.number(), z.literal('')]).optional(),
     referenceText: z.string().max(2000).optional().or(z.literal('')),
     options: z.array(optionSchema).optional(),
   })
@@ -77,17 +75,6 @@ const schema = z
           message: 'Agrega al menos 2 opciones',
         });
       }
-    }
-    if (
-      typeof data.minCritical === 'number' &&
-      typeof data.maxCritical === 'number' &&
-      data.minCritical >= data.maxCritical
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['maxCritical'],
-        message: 'El maximo critico debe ser mayor al minimo',
-      });
     }
   });
 
@@ -109,8 +96,6 @@ function emptyForm(): FormValues {
     unit: '',
     method: '',
     decimals: 2,
-    minCritical: '',
-    maxCritical: '',
     referenceText: '',
     options: [],
   };
@@ -126,8 +111,6 @@ function fromTest(test: Test): FormValues {
     unit: test.unit ?? '',
     method: test.method ?? '',
     decimals: test.decimals,
-    minCritical: test.minCritical ?? '',
-    maxCritical: test.maxCritical ?? '',
     referenceText: test.referenceText ?? '',
     options: test.options?.map((o) => ({ value: o.value })) ?? [],
   };
@@ -170,11 +153,7 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
       ...(values.method ? { method: values.method } : {}),
       ...(values.referenceText ? { referenceText: values.referenceText } : {}),
       ...(values.resultType === 'numeric'
-        ? {
-            decimals: values.decimals ?? 2,
-            ...(typeof values.minCritical === 'number' ? { minCritical: values.minCritical } : {}),
-            ...(typeof values.maxCritical === 'number' ? { maxCritical: values.maxCritical } : {}),
-          }
+        ? { decimals: values.decimals ?? 2 }
         : {}),
       ...(values.resultType === 'qualitative'
         ? {
@@ -341,42 +320,14 @@ export function TestDialog({ open, onOpenChange, test }: TestDialogProps) {
           )}
 
           {resultType === 'numeric' && (
-            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
-              <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                <p>
-                  Umbrales de <strong>alarma</strong>. Solo disparan el ícono{' '}
-                  <span className="font-mono">↑/↓</span> al lado del resultado cuando está fuera de
-                  rango. <strong>NO</strong> son los valores que se imprimen en la columna
-                  &quot;Valores referenciales&quot; del PDF — ésos se editan en la pestaña{' '}
-                  <strong>Rangos referenciales</strong>.
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="minCritical">Umbral crítico inferior (↓)</Label>
-                  <Input
-                    id="minCritical"
-                    type="number"
-                    step="any"
-                    {...form.register('minCritical')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxCritical">Umbral crítico superior (↑)</Label>
-                  <Input
-                    id="maxCritical"
-                    type="number"
-                    step="any"
-                    {...form.register('maxCritical')}
-                  />
-                  {form.formState.errors.maxCritical && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.maxCritical.message}
-                    </p>
-                  )}
-                </div>
-              </div>
+            <div className="flex items-start gap-2 rounded-md border border-info/30 bg-info/5 p-3 text-xs text-muted-foreground">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-info" aria-hidden />
+              <p>
+                Tanto los <strong>valores normales</strong> que se imprimen en el PDF como los{' '}
+                <strong>umbrales críticos</strong> (que disparan la flecha ↑/↓ de pánico) se
+                configuran por paciente en la pestaña <strong>Rangos referenciales</strong>. Eso
+                permite tener rangos distintos para hombre/mujer, niño/adulto, embarazo, etc.
+              </p>
             </div>
           )}
 

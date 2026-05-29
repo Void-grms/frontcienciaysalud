@@ -87,6 +87,8 @@ const schema = z
     physiologicalState: z.enum(['none', 'pregnancy', 'lactation']),
     valueMin: z.union([z.coerce.number(), z.literal('')]).optional(),
     valueMax: z.union([z.coerce.number(), z.literal('')]).optional(),
+    criticalMin: z.union([z.coerce.number(), z.literal('')]).optional(),
+    criticalMax: z.union([z.coerce.number(), z.literal('')]).optional(),
     qualitativeExpected: z.string().max(80).optional().or(z.literal('')),
     displayText: z.string().max(1000).optional().or(z.literal('')),
     priority: z.coerce.number().int().min(0).default(0),
@@ -101,6 +103,41 @@ const schema = z
         code: z.ZodIssueCode.custom,
         path: ['valueMax'],
         message: 'El máximo debe ser ≥ al mínimo',
+      });
+    }
+    if (
+      typeof data.criticalMin === 'number' &&
+      typeof data.criticalMax === 'number' &&
+      data.criticalMin > data.criticalMax
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['criticalMax'],
+        message: 'El máximo crítico debe ser ≥ al mínimo crítico',
+      });
+    }
+    // Umbral critico debe quedar afuera del rango normal: criticalMin ≤ valueMin,
+    // criticalMax ≥ valueMax. Si no, el flagger nunca llegaria a marcar low/high.
+    if (
+      typeof data.criticalMin === 'number' &&
+      typeof data.valueMin === 'number' &&
+      data.criticalMin > data.valueMin
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['criticalMin'],
+        message: 'Debe ser ≤ al mínimo normal (el umbral crítico va por debajo)',
+      });
+    }
+    if (
+      typeof data.criticalMax === 'number' &&
+      typeof data.valueMax === 'number' &&
+      data.criticalMax < data.valueMax
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['criticalMax'],
+        message: 'Debe ser ≥ al máximo normal (el umbral crítico va por encima)',
       });
     }
     if (
@@ -127,6 +164,8 @@ function emptyForm(): FormValues {
     physiologicalState: 'none',
     valueMin: '',
     valueMax: '',
+    criticalMin: '',
+    criticalMax: '',
     qualitativeExpected: '',
     displayText: '',
     priority: 0,
@@ -152,6 +191,8 @@ function fromRange(r: ReferenceRange): FormValues {
     physiologicalState: r.physiologicalState ?? 'none',
     valueMin: r.valueMin != null ? Number(r.valueMin) : '',
     valueMax: r.valueMax != null ? Number(r.valueMax) : '',
+    criticalMin: r.criticalMin != null ? Number(r.criticalMin) : '',
+    criticalMax: r.criticalMax != null ? Number(r.criticalMax) : '',
     qualitativeExpected: r.qualitativeExpected ?? '',
     displayText: r.displayText ?? '',
     priority: r.priority,
@@ -170,6 +211,8 @@ function toInput(values: FormValues, resultType: ResultType): ReferenceRangeInpu
   if (resultType === 'numeric') {
     if (typeof values.valueMin === 'number') payload.valueMin = values.valueMin;
     if (typeof values.valueMax === 'number') payload.valueMax = values.valueMax;
+    if (typeof values.criticalMin === 'number') payload.criticalMin = values.criticalMin;
+    if (typeof values.criticalMax === 'number') payload.criticalMax = values.criticalMax;
   }
   if (resultType === 'qualitative' && values.qualitativeExpected) {
     payload.qualitativeExpected = values.qualitativeExpected;
@@ -197,6 +240,16 @@ function formatValue(r: ReferenceRange, resultType: ResultType): string {
   if (min != null) return `≥ ${min}`;
   if (max != null) return `≤ ${max}`;
   return '—';
+}
+
+function formatCritical(r: ReferenceRange): string {
+  const min = r.criticalMin != null ? Number(r.criticalMin) : null;
+  const max = r.criticalMax != null ? Number(r.criticalMax) : null;
+  if (min == null && max == null) return '—';
+  const parts: string[] = [];
+  if (min != null) parts.push(`↓ ${min}`);
+  if (max != null) parts.push(`↑ ${max}`);
+  return parts.join(' · ');
 }
 
 interface TestRangesTabProps {
@@ -296,20 +349,21 @@ export function TestRangesTab({ testId, resultType, unit }: TestRangesTabProps) 
               <TableHead className="w-[90px]">Sexo</TableHead>
               <TableHead>Edad</TableHead>
               <TableHead className="hidden md:table-cell">Estado</TableHead>
-              <TableHead>Valor {unit ? `(${unit})` : ''}</TableHead>
+              <TableHead>Normal {unit ? `(${unit})` : ''}</TableHead>
+              <TableHead className="hidden sm:table-cell">Crítico</TableHead>
               <TableHead className="w-[70px] text-center">Prio.</TableHead>
               <TableHead className="w-[90px] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {query.isLoading ? (
-              <TableEmpty colSpan={6} iconHidden>
+              <TableEmpty colSpan={7} iconHidden>
                 Cargando...
               </TableEmpty>
             ) : query.isError ? (
-              <TableEmpty colSpan={6}>No se pudieron cargar los rangos.</TableEmpty>
+              <TableEmpty colSpan={7}>No se pudieron cargar los rangos.</TableEmpty>
             ) : items.length === 0 ? (
-              <TableEmpty colSpan={6}>
+              <TableEmpty colSpan={7}>
                 Aún no hay rangos para esta prueba. Agrega el primero para que aparezca en el
                 informe.
               </TableEmpty>
@@ -329,6 +383,9 @@ export function TestRangesTab({ testId, resultType, unit }: TestRangesTabProps) 
                   </TableCell>
                   <TableCell className="text-sm font-medium">
                     {formatValue(r, resultType)}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm tabular-nums text-destructive">
+                    {formatCritical(r)}
                   </TableCell>
                   <TableCell className="text-center text-sm">{r.priority}</TableCell>
                   <TableCell className="text-right">
@@ -480,35 +537,81 @@ export function TestRangesTab({ testId, resultType, unit }: TestRangesTabProps) 
           </div>
 
           {resultType === 'numeric' && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="range-value-min">
-                  Mínimo normal {unit ? `(${unit})` : ''}
-                </Label>
-                <Input
-                  id="range-value-min"
-                  type="number"
-                  step="any"
-                  {...form.register('valueMin')}
-                />
+            <>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Rango normal {unit ? `(${unit})` : ''}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="range-value-min">Mínimo normal</Label>
+                    <Input
+                      id="range-value-min"
+                      type="number"
+                      step="any"
+                      {...form.register('valueMin')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="range-value-max">Máximo normal</Label>
+                    <Input
+                      id="range-value-max"
+                      type="number"
+                      step="any"
+                      {...form.register('valueMax')}
+                    />
+                    {form.formState.errors.valueMax && (
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.valueMax.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="range-value-max">
-                  Máximo normal {unit ? `(${unit})` : ''}
-                </Label>
-                <Input
-                  id="range-value-max"
-                  type="number"
-                  step="any"
-                  {...form.register('valueMax')}
-                />
-                {form.formState.errors.valueMax && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.valueMax.message}
-                  </p>
-                )}
+
+              <div className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-destructive">
+                  Umbrales críticos {unit ? `(${unit})` : ''} — opcionales
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Disparan la flecha <span className="font-mono">↑/↓</span> de pánico cuando el
+                  resultado los supera. Quedan por <strong>fuera</strong> del rango normal: el
+                  mínimo crítico debe ser ≤ al mínimo normal, el máximo crítico ≥ al máximo
+                  normal. Si los dejás vacíos, este rango solo marca <em>alto/bajo</em> pero nunca
+                  crítico.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="range-critical-min">Mínimo crítico (↓)</Label>
+                    <Input
+                      id="range-critical-min"
+                      type="number"
+                      step="any"
+                      {...form.register('criticalMin')}
+                    />
+                    {form.formState.errors.criticalMin && (
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.criticalMin.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="range-critical-max">Máximo crítico (↑)</Label>
+                    <Input
+                      id="range-critical-max"
+                      type="number"
+                      step="any"
+                      {...form.register('criticalMax')}
+                    />
+                    {form.formState.errors.criticalMax && (
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.criticalMax.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {resultType === 'qualitative' && (
