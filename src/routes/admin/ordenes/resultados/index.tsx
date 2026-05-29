@@ -208,7 +208,7 @@ export default function ResultadosPage() {
 
       {/* Progress + autosave status */}
       <Card>
-        <CardContent className="space-y-3 p-4 sm:p-5">
+        <CardContent className="space-y-3">
           <div className="flex items-baseline justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">

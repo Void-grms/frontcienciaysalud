@@ -118,7 +118,7 @@ export default function OrdenesListPage() {
       />
 
       <Card>
-        <CardContent className="space-y-4 p-4 sm:p-5">
+        <CardContent className="space-y-4">
           {/* Filtros */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_180px_140px_140px_auto]">
             <div className="relative">

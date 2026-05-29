@@ -49,9 +49,20 @@ export const CardDescription = React.forwardRef<
 ));
 CardDescription.displayName = 'CardDescription';
 
+// pt-0 solo cuando hay un CardHeader/CardFooter encima (no es first-child) —
+// asi cuando se usa CardContent standalone tiene padding superior y el contenido
+// no se pega al borde del card. Eso evita que cada list view tenga que pisar
+// el padding con `p-4 sm:p-5`.
 export const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('p-5 pt-0 sm:p-6 sm:pt-0', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn(
+        'p-5 sm:p-6 [&:not(:first-child)]:pt-0 sm:[&:not(:first-child)]:pt-0',
+        className,
+      )}
+      {...props}
+    />
   ),
 );
 CardContent.displayName = 'CardContent';
@@ -60,7 +71,10 @@ export const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex items-center p-5 pt-0 sm:p-6 sm:pt-0', className)}
+      className={cn(
+        'flex items-center p-5 sm:p-6 [&:not(:first-child)]:pt-0 sm:[&:not(:first-child)]:pt-0',
+        className,
+      )}
       {...props}
     />
   ),

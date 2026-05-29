@@ -116,7 +116,7 @@ export default function ReferenciasPage() {
       />
 
       <Card>
-        <CardContent className="space-y-4 p-4 sm:p-5">
+        <CardContent className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search

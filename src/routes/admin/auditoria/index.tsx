@@ -99,7 +99,7 @@ export default function AuditoriaPage() {
       />
 
       <Card>
-        <CardContent className="space-y-4 p-4 sm:p-5">
+        <CardContent className="space-y-4">
           {/* Filtros */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_140px_140px]">
             <div className="relative">

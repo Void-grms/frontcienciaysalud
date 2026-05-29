@@ -76,7 +76,7 @@ export default function PatientOrdersList() {
       </div>
 
       <Card>
-        <CardContent className="space-y-4 p-4 sm:p-5">
+        <CardContent className="space-y-4">
           <div className="relative">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
