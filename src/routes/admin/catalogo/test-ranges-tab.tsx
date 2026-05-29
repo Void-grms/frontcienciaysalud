@@ -181,13 +181,18 @@ function pickAgeUnit(min: number | null, max: number | null): AgeUnit {
 }
 
 function fromRange(r: ReferenceRange): FormValues {
-  const unit = pickAgeUnit(r.ageMinDays, r.ageMaxDays);
+  // Si ambos son 0 normalizamos a vacio: en DB pudo haberse guardado asi en
+  // versiones viejas o por imports, pero la intencion casi siempre fue
+  // "cualquier edad" (un rango 0-0 solo aplica al instante del nacimiento).
+  const ageMinDays = r.ageMinDays === 0 && r.ageMaxDays === 0 ? null : r.ageMinDays;
+  const ageMaxDays = r.ageMinDays === 0 && r.ageMaxDays === 0 ? null : r.ageMaxDays;
+  const unit = pickAgeUnit(ageMinDays, ageMaxDays);
   const divisor = AGE_UNIT_DIVISOR[unit];
   return {
     sex: r.sex,
     ageUnit: unit,
-    ageMin: r.ageMinDays != null ? r.ageMinDays / divisor : '',
-    ageMax: r.ageMaxDays != null ? r.ageMaxDays / divisor : '',
+    ageMin: ageMinDays != null ? ageMinDays / divisor : '',
+    ageMax: ageMaxDays != null ? ageMaxDays / divisor : '',
     physiologicalState: r.physiologicalState ?? 'none',
     valueMin: r.valueMin != null ? Number(r.valueMin) : '',
     valueMax: r.valueMax != null ? Number(r.valueMax) : '',
@@ -205,8 +210,14 @@ function toInput(values: FormValues, resultType: ResultType): ReferenceRangeInpu
     sex: values.sex,
     priority: values.priority,
   };
-  if (typeof values.ageMin === 'number') payload.ageMinDays = Math.round(values.ageMin * divisor);
-  if (typeof values.ageMax === 'number') payload.ageMaxDays = Math.round(values.ageMax * divisor);
+  // 0/0 lo interpretamos como "cualquier edad" — el usuario casi nunca quiere
+  // un rango que solo aplique al instante del nacimiento, asi que no enviamos
+  // los limites en ese caso y queda como null/null en DB.
+  const zeroOnBoth = values.ageMin === 0 && values.ageMax === 0;
+  if (typeof values.ageMin === 'number' && !zeroOnBoth)
+    payload.ageMinDays = Math.round(values.ageMin * divisor);
+  if (typeof values.ageMax === 'number' && !zeroOnBoth)
+    payload.ageMaxDays = Math.round(values.ageMax * divisor);
   if (values.physiologicalState !== 'none') payload.physiologicalState = values.physiologicalState;
   if (resultType === 'numeric') {
     if (typeof values.valueMin === 'number') payload.valueMin = values.valueMin;
@@ -223,6 +234,10 @@ function toInput(values: FormValues, resultType: ResultType): ReferenceRangeInpu
 
 function formatAge(min: number | null, max: number | null): string {
   if (min == null && max == null) return 'Cualquier edad';
+  // 0-0 no tiene sentido clinico (no existe un rango que solo aplique al
+  // instante del nacimiento). Casi siempre es la huella de un rango que se
+  // guardo sin elegir edades, asi que lo mostramos como "Cualquier edad".
+  if ((min ?? 0) === 0 && (max ?? 0) === 0) return 'Cualquier edad';
   const unit = pickAgeUnit(min, max);
   const divisor = AGE_UNIT_DIVISOR[unit];
   const u = AGE_UNIT_LABEL[unit];
